@@ -1,8 +1,8 @@
-# Geometric and Statistical Analysis of Avian Skull Morphology
+# Robust Parametric Estimation of Avian Cranial Morphology
 
 <img src = "https://github.com/garyptchoi/skull-morphology/blob/main/cover.png" height="400" />
 
-This repository contains Python scripts for the geometric and statistical analysis of avian skull morphology.
+This repository contains Python scripts for the robust parametric estimation of avian skull morphology.
 
 * **Categories:** The scripts are categorized into (1) Geometric Analysis, (2) Statistical Analysis.
 * **Geometric Analysis:** Extract geometric features from 3D avian skull models.
@@ -72,13 +72,13 @@ This repository contains Python scripts for the geometric and statistical analys
 If you use this code or data in your work, please cite:
 
 Kaikwan Lau and Gary P. T. Choi, 
-"[Geometric and statistical analysis of avian skull morphology.](https://arxiv.org/abs/2511.06426)"
+"[Robust Parametric Estimation of Avian Cranial Morphology.](https://arxiv.org/abs/2511.06426)"
 arXiv preprint arXiv:2511.06426, 2025.
 
 ```bibtex
-@article{lau2025geometric,
+@article{lau2025robust,
     author    = {Lau, Kaikwan and Choi, Gary P. T.},
-    title     = {Geometric and statistical analysis of avian skull morphology},
+    title     = {Robust Parametric Estimation of Avian Cranial Morphology},
     journal   = {arXiv preprint arXiv:2511.06426},
     year      = {2025},
     eprint    = {2511.06426},
