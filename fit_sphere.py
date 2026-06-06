@@ -38,6 +38,8 @@ def fit_sphere_iteratively(points, max_iterations=3, outlier_std_dev=2.0):
     """
     current_points = points.copy()
     for i in range(max_iterations):
+
+        # Check whether the number of points falls below the minimum required to uniquely determined the sphere
         if len(current_points) < 4:
             return None, None, current_points
 
@@ -45,6 +47,7 @@ def fit_sphere_iteratively(points, max_iterations=3, outlier_std_dev=2.0):
         initial_radius = np.mean(np.linalg.norm(current_points - initial_center, axis=1))
         initial_guess = np.append(initial_center, initial_radius)
 
+        # Find the optimal sphere parameters
         result = minimize(
             sphere_loss_function,
             initial_guess,
@@ -61,6 +64,7 @@ def fit_sphere_iteratively(points, max_iterations=3, outlier_std_dev=2.0):
 
         inlier_mask = errors < (mean_error + outlier_std_dev * std_error)
 
+        # Check whether the result stabilizes
         if np.all(inlier_mask):
             break
 
