@@ -159,7 +159,8 @@ if __name__ == '__main__':
                                                                             radius=CURVATURE_RADIUS)
         mean_curvatures[~posterior_mask] = -np.inf
         sorted_indices = np.argsort(mean_curvatures)[::-1]
-        most_convex_indices = sorted_indices[:TARGET_POINT_COUNT]
+        n_in_region = int(np.isfinite(mean_curvatures).sum())
+        most_convex_indices = sorted_indices[:min(TARGET_POINT_COUNT, n_in_region)]
         valid_indices_mask = np.zeros(len(processed_mesh.vertices), dtype=bool)
         valid_indices_mask[most_convex_indices] = True
         seed_index = np.argmax(mean_curvatures)
