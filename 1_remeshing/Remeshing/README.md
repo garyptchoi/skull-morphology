@@ -46,7 +46,7 @@ The wrapper finds this MATLAB folder automatically. It accepts STL, PLY, OBJ and
 
 `--overwrite` refreshes the staged raw inputs and remeshes them again. MATLAB errors and missing output meshes return a nonzero exit status. A successful process still needs a check of the output geometry.
 
-Both Python wrappers perform the same remeshing steps and use a default remeshing parameter of 60. Fitting is a separate operation in `2_fitting/`. To inspect a prepared mesh after remeshing, run:
+`remesh_in_pycharm.py` handles both bird and human raw meshes and uses a default remeshing parameter of 60. Fitting is a separate operation in `2_fitting/`. To inspect a prepared mesh after remeshing, run:
 
 ```bash
 python 2_fitting/check_orbit.py --folder 1_remeshing/dataset_remeshed --results 2_fitting/output/check_orbit --no-show
@@ -61,7 +61,7 @@ filename,para,reason
 specimen.stl,60,chosen after inspecting the surface
 ```
 
-Use the `.stl` filename here even when the original scan is PLY, OBJ or OFF. Both wrappers use `PARA_DEFAULT = 60` for files without an override. Choose the parameter by inspecting the resulting surface; these defaults do not reproduce every specimen's original preprocessing.
+Use the `.stl` filename here even when the original scan is PLY, OBJ or OFF. The Python wrapper uses `PARA_DEFAULT = 60` for files without an override. Choose the parameter by inspecting the resulting surface; these defaults do not reproduce every specimen's original preprocessing.
 
 ## Use MATLAB directly
 
@@ -72,7 +72,7 @@ remesh_batch('../dataset_CT', '../dataset_remeshed', '../params.csv', ...
     'MeshFix', true, 'Rescale', false, 'Seed', 0)
 ```
 
-Direct MATLAB input must be STL. Without a parameter CSV, `remesh_batch('../dataset_CT', '../dataset_remeshed')` uses `para = 60`. MATLAB and both Python wrappers use the same default. A parameter CSV can override it for individual specimens.
+Direct MATLAB input must be STL. Without a parameter CSV, `remesh_batch('../dataset_CT', '../dataset_remeshed')` uses `para = 60`. MATLAB and the Python wrapper use the same default. A parameter CSV can override it for individual specimens.
 
 To try the original scan-derived surface included for Fig. 1, run this after setup from `1_remeshing/Remeshing/`:
 

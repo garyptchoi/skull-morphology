@@ -19,9 +19,8 @@ The MATLAB source is included in `1_remeshing/Remeshing/`. Install MATLAB and it
 | `1_remeshing/Remeshing/remesh_batch.m` | Voxelizes, repairs and smooths raw STL meshes; writes a log for each batch |
 | `1_remeshing/Remeshing/test_remeshing.m` | Checks the installation with a synthetic sphere |
 | `1_remeshing/remesh_in_pycharm.py` | Watches the raw-input folder and calls MATLAB to write remeshed STLs and run logs; `--once` processes the current files and exits |
-| `1_remeshing/remesh_human_head_in_pycharm.py` | The same remeshing-only workflow, with a default remeshing parameter of 60 |
 
-Both Python wrappers and the MATLAB batch function use a default remeshing parameter of 60. These are tools for new raw inputs, not an automated replay of the specimen-specific preprocessing used to produce the released meshes. Use the already released meshes for the documented reproduction route; document the settings used for new raw scans.
+Use `remesh_in_pycharm.py` for both bird and human raw meshes. The Python wrapper and MATLAB batch function use a default remeshing parameter of 60. These are tools for new raw inputs, not an automated replay of the specimen-specific preprocessing used to produce the released meshes. Use the already released meshes for the documented reproduction route; document the settings used for new raw scans.
 
 ## 2. Fitting
 
