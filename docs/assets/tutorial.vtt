@@ -1,0 +1,229 @@
+WEBVTT
+
+1
+00:00:01.100 --> 00:00:10.267
+Welcome! This tutorial shows how to use the code of our paper, Robust parametric estimation of avian cranial morphology.
+
+2
+00:00:11.117 --> 00:00:17.194
+The code measures 3D skull meshes automatically, without placing any landmarks by hand.
+
+3
+00:00:17.244 --> 00:00:28.062
+It measures the size of the skull with a bounding box, finds the orbit from the curvature of the surface and fits a sphere to it, and fits an ellipsoid to the braincase.
+
+4
+00:00:28.112 --> 00:00:34.318
+The same code also works on other skulls, such as Hawaiian honeycreepers and human crania.
+
+5
+00:00:35.368 --> 00:00:43.811
+In part one, you will measure your own skulls: download the code, install it, add your meshes, run the fitting, and check the results.
+
+6
+00:00:43.861 --> 00:00:49.159
+In part two, you will reproduce the numbers, tables and figures of the paper.
+
+7
+00:00:50.009 --> 00:00:59.488
+You need Python 3.12. A code editor such as PyCharm or VS Code makes things easier, but it is not required.
+
+8
+00:00:59.538 --> 00:01:05.573
+You do not need to program: you will change a line or two at the top of a script, and press Run.
+
+9
+00:01:06.423 --> 00:01:17.901
+First, download the code. On the GitHub page of the project, click the green Code button, then Download ZIP, and unzip the folder anywhere on your computer.
+
+10
+00:01:17.951 --> 00:01:21.724
+If you use git, you can clone the repository instead.
+
+11
+00:01:22.574 --> 00:01:24.337
+Here is what you get.
+
+12
+00:01:24.387 --> 00:01:29.634
+The data folder holds all the skull meshes, and the data tables of the paper.
+
+13
+00:01:29.684 --> 00:01:39.641
+The numbered folders hold the scripts, one folder for each step: remeshing, fitting, statistics, the two orbits, the figures, and the verification.
+
+14
+00:01:39.691 --> 00:01:47.581
+Every script finds the meshes through the small file paths.py, so you can run any script from its own folder.
+
+15
+00:01:48.431 --> 00:01:59.163
+Next, install the Python packages. Open a terminal in the project folder, and type: pip install -r requirements.txt
+
+16
+00:01:59.213 --> 00:02:08.351
+This installs everything the scripts need, such as trimesh for the meshes and PyVista for the 3D views. You only do this once.
+
+17
+00:02:09.201 --> 00:02:11.631
+Part one: measure your own skulls.
+
+18
+00:02:13.081 --> 00:02:15.490
+Before you start, check your meshes.
+
+19
+00:02:15.540 --> 00:02:22.511
+Each skull must be a triangle mesh in STL format, in millimetres, with one skull per file.
+
+20
+00:02:22.561 --> 00:02:34.483
+Orient the skulls as ours are: the x axis runs along the skull, with the beak towards minus x and the back of the skull towards plus x, and the z axis points up.
+
+21
+00:02:34.533 --> 00:02:43.931
+The settings also assume remeshed surfaces, with about 0.8 millimetres between vertices, like the meshes in the data folder.
+
+22
+00:02:43.981 --> 00:02:54.223
+Raw scans must be remeshed first: the scripts in the folder 1_remeshing do this, using MATLAB and the remeshing code described in its read-me.
+
+23
+00:02:55.073 --> 00:03:02.182
+Now make a new folder inside data, for example My_skulls, and copy your STL files into it.
+
+24
+00:03:03.032 --> 00:03:06.957
+Open the script fit_sphere_batch.py, in the folder 2_fitting.
+
+25
+00:03:07.007 --> 00:03:11.592
+Near the top, the list DIRECTORY_PATHS gives the folders to measure.
+
+26
+00:03:11.642 --> 00:03:17.394
+Replace these folders with yours, as shown. You can list as many folders as you like.
+
+27
+00:03:18.244 --> 00:03:24.515
+Now press Run in your editor, or type python fit_sphere_batch.py in a terminal.
+
+28
+00:03:24.565 --> 00:03:33.721
+For each skull, the script looks for the most concave surface in the middle of the skull, fits a sphere to it, and prints the radius in millimetres.
+
+29
+00:03:33.771 --> 00:03:37.124
+Here, all six skulls were fitted in less than a minute.
+
+30
+00:03:37.974 --> 00:03:43.102
+The results are written next to the script, in the folder output/fit_sphere_batch.
+
+31
+00:03:43.152 --> 00:03:51.107
+You get one Excel table for all the skulls, a picture of every fit, and a list of the skulls where no orbit was found.
+
+32
+00:03:51.957 --> 00:03:54.712
+In the table, each row is one skull.
+
+33
+00:03:54.762 --> 00:03:59.630
+Length, width and height are the sides of the bounding box, in millimetres.
+
+34
+00:03:59.680 --> 00:04:05.959
+The sphere radius is the radius of the orbit, and the curvature is one over the radius.
+
+35
+00:04:06.009 --> 00:04:16.264
+n_inliers is the number of surface points the sphere was fitted to, and rms_over_radius is the fit error, as a fraction of the radius.
+
+36
+00:04:17.114 --> 00:04:29.183
+Always check the fits. In the paper, a fit is accepted when it uses at least 40 points, and its fit error is at most 0.10, that is, ten percent of the radius.
+
+37
+00:04:29.233 --> 00:04:37.822
+Then open the pictures. In a good fit, the blue sphere sits in the orbit, and the red points it was fitted to line the orbit wall.
+
+38
+00:04:37.872 --> 00:04:46.250
+Here, the fit error is 0.18, above the limit: the points spread over the rim of the orbit, and this fit is flagged.
+
+39
+00:04:47.100 --> 00:04:49.926
+The default settings are made for finch skulls.
+
+40
+00:04:49.976 --> 00:04:59.628
+The orbit is searched for in the middle of the skull, from 30 to 70 percent of its length, and its radius must be between 2 and 6 millimetres.
+
+41
+00:04:59.678 --> 00:05:06.778
+For other animals, change these values here, or give a folder its own values in FOLDER_OVERRIDES.
+
+42
+00:05:06.778 --> 00:05:13.262
+For the human crania of the paper, we used 10 to 50 percent, and 2 to 60 millimetres.
+
+43
+00:05:14.112 --> 00:05:22.258
+To fit the ellipsoid to the braincase, open fit_ellipsoid.py in the same folder, and set DIRECTORY_PATH to your folder.
+
+44
+00:05:22.308 --> 00:05:31.792
+It uses the most convex surface in the back 40 percent of the skull, and writes the three semi-axes of every skull to an Excel table.
+
+45
+00:05:31.842 --> 00:05:41.626
+A 3D window shows each fit: close it to go on to the next skull, or set ENABLE_VISUALIZATION to False to run without windows.
+
+46
+00:05:42.476 --> 00:05:44.900
+Part two: reproduce the paper.
+
+47
+00:05:46.350 --> 00:05:54.003
+The data folder already contains the 100 skulls of Darwin's finches and their relatives used in the paper.
+
+48
+00:05:54.053 --> 00:06:04.276
+Run fit_sphere.py and fit_ellipsoid.py in the fitting folder, and you get the measurements of the file Dataset.xlsx, to within a millionth of a millimetre.
+
+49
+00:06:05.126 --> 00:06:08.235
+The statistics folder reads these measurements.
+
+50
+00:06:08.285 --> 00:06:19.086
+correlation.py relates the orbit to the size of the skull, and modelling.py fits Equation 8, which predicts the curvature of the orbit from the three dimensions of the skull.
+
+51
+00:06:19.936 --> 00:06:29.104
+two_orbit.py fits the orbit on both sides of every skull, and draws both fits, as in Section S5 of the Supporting Information.
+
+52
+00:06:29.954 --> 00:06:37.056
+figure.py draws every figure of the paper from the meshes, as vector PDF files.
+
+53
+00:06:37.106 --> 00:06:41.140
+Before drawing, it checks 22 numbers against the paper.
+
+54
+00:06:41.990 --> 00:06:51.211
+Finally, verify_all.py refits every mesh, recomputes every number and table of the paper, and compares each one with the printed value.
+
+55
+00:06:51.261 --> 00:06:55.074
+It writes a report that you can open in any web browser.
+
+56
+00:06:55.924 --> 00:07:02.044
+Every script writes its results into an output folder next to it, and never changes your data.
+
+57
+00:07:02.094 --> 00:07:06.392
+If you use the code, please cite our paper. Thank you for watching!

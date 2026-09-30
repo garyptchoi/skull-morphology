@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "Please cite the accompanying preprint when using this software."
+type: software
+title: "Robust Parametric Estimation of Avian Cranial Morphology"
+authors:
+  - family-names: Lau
+    given-names: Kaikwan
+  - family-names: Choi
+    given-names: Gary P. T.
+repository-code: "https://github.com/kaikwanlau/skull-morphology"
+license: Apache-2.0
+preferred-citation:
+  type: article
+  title: "Robust Parametric Estimation of Avian Cranial Morphology"
+  authors:
+    - family-names: Lau
+      given-names: Kaikwan
+    - family-names: Choi
+      given-names: Gary P. T.
+  journal: "arXiv"
+  year: 2025
+  doi: "10.48550/arXiv.2511.06426"
+  url: "https://arxiv.org/abs/2511.06426"

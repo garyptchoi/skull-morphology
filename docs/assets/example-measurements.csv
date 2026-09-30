@@ -1,0 +1,2 @@
+filename,status,length_x,width_y,height_z,sphere_radius,cx,cy,cz,curvature,seed_attempt,n_candidates,n_inliers,rms_mm,fit_err_pct,fit_side,centre_frac,n_vertices,rejected,s4_screen_pass
+G.DifficilisA.stl,ok,27.6419734954834,15.433545112609863,15.209097385406494,3.5631448892009923,-4.450332299047177,-3.4031101845268252,1.172711618484361,0.28065095052147665,1,144,128,0.13072991506629417,3.6689474924947367,y<0,0.48505402880326587,2873,,True

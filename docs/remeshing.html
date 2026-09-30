@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Remeshing setup — Skull morphology</title><link rel="stylesheet" href="assets/site.css"></head>
+<body><a class="skip" href="#main">Skip to content</a><div class="shell">
+<header class="masthead"><a class="brand" href="index.html">skull / morphology<small>GEOMETRY · BIOLOGY · CODE</small></a>
+<nav aria-label="Main navigation"><a href="index.html">Overview</a><a href="start-here.html">Start here</a><a class="repo-link" href="https://github.com/kaikwanlau/skull-morphology">GitHub ↗</a></nav></header>
+<div class="article-layout"><aside class="article-nav" aria-label="Guide contents"><a href="index.html">Project overview</a><a href="start-here.html">Start here</a><a href="reproduce.html">Reproduce</a><a href="reference.html">Script reference</a><a href="data.html">Data sources</a><a href="citation.html">Citation</a></aside><main class="article" id="main"><h1 id="matlab-remeshing">MATLAB remeshing</h1>
+<p>This folder contains the MATLAB batch function and the helpers used by the Python remeshing scripts. It voxelizes raw skull meshes, attempts to close handles and holes, smooths the surface, and writes STL files for fitting.</p>
+<p>You can skip this step when using the prepared meshes in <code>data/</code>.</p>
+<h2 id="requirements">Requirements</h2>
+<ul>
+<li><strong>MATLAB R2021a or later</strong>, because the topology-repair routine uses <a href="https://www.mathworks.com/help/matlab/ref/graph.cyclebasis.html"><code>cyclebasis</code></a>.</li>
+<li><strong>Image Processing Toolbox</strong> for filling, connected components and skeletonization.</li>
+<li><strong>Statistics and Machine Learning Toolbox</strong> for the distance calculations used in topology repair.</li>
+<li>Internet access for the first MeshFix download. An offline installation is also possible.</li>
+</ul>
+<p>The supplied voxelizer binaries cover 64-bit Windows, Linux, Intel macOS and Apple silicon macOS. The C source is included for rebuilding if a binary does not load in your MATLAB version. Rebuilding requires a C compiler supported by MATLAB.</p>
+<h2 id="set-up-once">Set up once</h2>
+<p>In MATLAB, start in the repository root and run:</p>
+<pre><code class="language-matlab">cd('1_remeshing/Remeshing')
+setup_remeshing
+test_remeshing
+</code></pre>
+<p><code>setup_remeshing</code> checks the toolboxes and voxelizer, then downloads the MeshFix executable for your platform from a fixed revision of the official iso2mesh repository. <code>test_remeshing</code> runs a small synthetic-sphere test; it does not use or alter the study meshes.</p>
+<p>If MATLAB reports an invalid MEX file, run:</p>
+<pre><code class="language-matlab">mex -setup C
+setup_remeshing('RebuildMex', true)
+</code></pre>
+<p>For an offline installation, obtain the matching MeshFix binary from the <a href="https://github.com/fangq/iso2mesh/tree/4a0ca5b65d5d292b83b40fd0fdcb742625e573a6/bin">pinned iso2mesh folder</a>, place it in <code>code/iso2mesh/bin/</code>, and run <code>setup_remeshing('DownloadMeshFix', false)</code>. On Windows, rename <code>meshfix_x86-64.exe</code> to <code>meshfix.exe</code>. MeshFix is a separate executable, despite the <code>.mex*</code> extensions used on macOS and Linux.</p>
+<h2 id="use-the-python-workflow">Use the Python workflow</h2>
+<p>Put raw scans in <code>1_remeshing/dataset_CT/</code>. Install the Python requirements, then run this command from the repository root:</p>
+<pre><code class="language-bash">python 1_remeshing/remesh_in_pycharm.py --once
+</code></pre>
+<p>The wrapper finds this MATLAB folder automatically. It accepts STL, PLY, OBJ and OFF inputs, converts them to STL when needed, and writes remeshed STL files and run logs. It stops after remeshing. It uses MATLAB Engine when available, otherwise <code>matlab -batch</code>. If MATLAB is not on your system path, pass <code>--matlab</code> with the full path to the MATLAB executable.</p>
+<p><code>--overwrite</code> refreshes the staged raw inputs and remeshes them again. MATLAB errors and missing output meshes return a nonzero exit status. A successful process still needs a check of the output geometry.</p>
+<p>The human wrapper performs the same remeshing steps with a default remeshing parameter of 60. Fitting is a separate operation in <code>2_fitting/</code>. To inspect a prepared mesh after remeshing, run:</p>
+<pre><code class="language-bash">python 2_fitting/check_orbit.py --folder 1_remeshing/dataset_remeshed --results 2_fitting/output/check_orbit --no-show
+</code></pre>
+<p>The human fitting script in <code>2_fitting/</code> reproduces the released human fits with the paper's 10–50% search band and 2–60 mm radius range.</p>
+<p>For specimen-specific parameters, create <code>1_remeshing/params.csv</code>:</p>
+<pre><code class="language-csv">filename,para,reason
+specimen.stl,60,chosen after inspecting the surface
+</code></pre>
+<p>Use the <code>.stl</code> filename here even when the original scan is PLY, OBJ or OFF. The bird wrapper uses <code>PARA_DEFAULT = 40</code> for files without an override. Choose the parameter by inspecting the resulting surface; these defaults do not reproduce every specimen's original preprocessing.</p>
+<h2 id="use-matlab-directly">Use MATLAB directly</h2>
+<p>From <code>1_remeshing/Remeshing/</code>:</p>
+<pre><code class="language-matlab">remesh_batch('../dataset_CT', '../dataset_remeshed', '../params.csv', ...
+    'MeshFix', true, 'Rescale', false, 'Seed', 0)
+</code></pre>
+<p>Direct MATLAB input must be STL. Without a parameter CSV, <code>remesh_batch('../dataset_CT', '../dataset_remeshed')</code> uses <code>para = 60</code>. MATLAB and Python therefore have different defaults; pass a parameter CSV when comparing runs.</p>
+<p>To try the original scan-derived surface included for Fig. 1, run this after setup from <code>1_remeshing/Remeshing/</code>:</p>
+<pre><code class="language-matlab">remesh_batch('../../data/figure_inputs/raw_meshes', ...
+             '../../output/raw_mesh_test', '', 'Seed', 0)
+</code></pre>
+<p>This uses <code>para = 60</code> and writes <code>P2.InornataA_p60.stl</code>, <code>remeshing_log.csv</code> and <code>remeshing_settings.txt</code> into <code>output/raw_mesh_test/</code> at the repository root. Check the new STL for boundary and non-manifold edges, connected components and surface distortion before interpreting its fits. A watertight surface alone does not establish anatomical accuracy. Use a new output folder for an independent rerun, since existing meshes are skipped unless <code>Overwrite</code> is enabled.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Option</th>
+<th style="text-align: left;">Default</th>
+<th style="text-align: left;">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>MeshFix</code></td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">Repair meshes that fail the Euler check</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Rescale</code></td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Apply the optional ICP alignment and rescaling step</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>RescaleMode</code></td>
+<td style="text-align: left;"><code>'uniform'</code></td>
+<td style="text-align: left;">Use <code>'nonuniform'</code> for separate axis scale factors</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Overwrite</code></td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Skip existing outputs unless explicitly enabled</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Seed</code></td>
+<td style="text-align: left;"><code>0</code></td>
+<td style="text-align: left;">Reset the random generator before each specimen</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Threads</code></td>
+<td style="text-align: left;"><code>[]</code></td>
+<td style="text-align: left;">Use MATLAB's current thread setting</td>
+</tr>
+</tbody>
+</table>
+<p>New working outputs retain the <code>&lt;specimen&gt;_p&lt;para&gt;.stl</code> format expected by the Python wrappers. The cleaned filenames of the released meshes in <code>data/</code> are unchanged. Each run writes <code>remeshing_log.csv</code> and appends its settings to <code>remeshing_settings.txt</code> in the output folder. Check the log for failed specimens and inspect the surfaces before fitting. Remeshing does not establish anatomical orientation.</p>
+<p>The same seed makes runs less dependent on processing order; identical results across MATLAB versions or platforms are not guaranteed.</p>
+<h2 id="included-files">Included files</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">File or folder</th>
+<th style="text-align: left;">Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>remesh_batch.m</code></td>
+<td style="text-align: left;">Batch entry point called by Python</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>setup_remeshing.m</code></td>
+<td style="text-align: left;">Dependency checks, MEX rebuild and MeshFix installation</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>test_remeshing.m</code></td>
+<td style="text-align: left;">Small installation smoke test</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>code/voxelization/</code></td>
+<td style="text-align: left;">Voxelization, topology repair and Skeleton3D</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>code/mesh/</code></td>
+<td style="text-align: left;">Laplacian smoothing and supporting matrix routines</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>code/stlTools/</code></td>
+<td style="text-align: left;">STL reading and writing</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>code/iso2mesh/</code></td>
+<td style="text-align: left;">MeshFix interface and supporting I/O</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>code/natsortfiles/</code></td>
+<td style="text-align: left;">Natural filename sorting</td>
+</tr>
+</tbody>
+</table>
+<p>The source was taken from the supplied remeshing archive. The primary function name in <code>voxelelize_genus.m</code> now matches its filename, and the <code>conncomp</code> fallback receives a MATLAB graph object. The voxelization and smoothing parameters are unchanged.</p>
+<p>Third-party credits and licenses are recorded in <a href="https://github.com/kaikwanlau/skull-morphology/blob/main/1_remeshing/Remeshing/THIRD_PARTY.md">THIRD_PARTY.md</a>. This is a selected dependency set; unrelated toolboxes, old demos, raw scans and workspace files are excluded.</p></main></div>
+<footer class="footer"><span>SKULL / MORPHOLOGY — RESEARCH GUIDE</span><a href="index.html">Back to the visual guide ↑</a></footer>
+</div></body></html>

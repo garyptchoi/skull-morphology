@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data sources — Skull morphology</title><link rel="stylesheet" href="assets/site.css"></head>
+<body><a class="skip" href="#main">Skip to content</a><div class="shell">
+<header class="masthead"><a class="brand" href="index.html">skull / morphology<small>GEOMETRY · BIOLOGY · CODE</small></a>
+<nav aria-label="Main navigation"><a href="index.html">Overview</a><a href="start-here.html">Start here</a><a class="repo-link" href="https://github.com/kaikwanlau/skull-morphology">GitHub ↗</a></nav></header>
+<div class="article-layout"><aside class="article-nav" aria-label="Guide contents"><a href="index.html">Project overview</a><a href="start-here.html">Start here</a><a href="reproduce.html">Reproduce</a><a href="reference.html">Script reference</a><a href="data.html" aria-current="page">Data sources</a><a href="citation.html">Citation</a></aside><main class="article" id="main"><h1 id="data">Data</h1>
+<p>This folder contains the prepared skull meshes and measurement workbooks. The scripts locate
+them through <code>paths.py</code> in the repository root.</p>
+<table>
+<thead>
+<tr>
+<th>Folder or file</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DF_and_their_relatives/</code></td>
+<td>100 remeshed skulls of Darwin's finches and their relatives</td>
+</tr>
+<tr>
+<td><code>Honeycreepers_watertight/</code></td>
+<td>42 skulls of Hawaiian honeycreepers (SI Section S4)</td>
+</tr>
+<tr>
+<td><code>HC_Relatives_watertight/</code></td>
+<td>9 skulls of their cardueline relatives (SI Section S4)</td>
+</tr>
+<tr>
+<td><code>Peromyscus/</code></td>
+<td>2 rodent skulls</td>
+</tr>
+<tr>
+<td><code>Human_cranium/</code></td>
+<td>4 human crania</td>
+</tr>
+<tr>
+<td><code>Dataset.xlsx</code></td>
+<td>all measurements of the 100 finch specimens</td>
+</tr>
+<tr>
+<td><code>Dataset_training.xlsx</code></td>
+<td>the 50 training specimens of Eq. (8)</td>
+</tr>
+<tr>
+<td><code>Dataset_other_taxa.xlsx</code></td>
+<td>53 per-specimen records for SI Section S4: 51 birds and 2 rodents</td>
+</tr>
+<tr>
+<td><code>figure_inputs/</code></td>
+<td>inputs used only by <code>5_figures/figure.py</code></td>
+</tr>
+</tbody>
+</table>
+<p>The scripts only read from this folder; their results go into <code>output/</code> next to each script.</p>
+<p>The <a href="https://github.com/kaikwanlau/skull-morphology/tree/main/data/figure_inputs">figure-input folder</a> also includes the referenced photograph, one original scan-derived STL and two earlier-remeshed skulls. Their source links and reuse terms are listed there; they do not add specimens to the analysis cohorts above.</p>
+<h2 id="use-in-the-study">Use in the study</h2>
+<p>The <strong>100 skulls of Darwin’s finches and their relatives</strong> form the main dataset for the skull measurements and statistical analyses.</p>
+<p>The <strong>51 additional bird skulls</strong> (42 Hawaiian honeycreepers and 9 cardueline relatives) were analysed with the finch fitting settings. In Supporting Information Section S4, 38 of the 51 orbital fits meet both quality criteria: at least 40 inliers and an RMS residual no greater than 10% of the fitted radius. The other 13 are flagged for review. Every fit was also inspected visually.</p>
+<p>The <strong>two rodent skulls and four human crania</strong> are exploratory examples used to examine the method’s scope and limitations:</p>
+<ul>
+<li>In the rodents, the fitted spheres lie outside the orbits. Orbital measurement fields are therefore blank in the released workbook and generated measurement files, with an explanatory status. Specimen identities, skull dimensions and mesh topology are retained.</li>
+<li>In the human crania, the search band was changed to 10–50% of skull length and the radius range to 2–60 mm. The fitted spheres lie in the orbits, but none of the four fits meets both S4 quality criteria.</li>
+</ul>
+<p>These are groups of specimens; all the supplied surface meshes use the STL format. Their inclusion does not imply that the method gives reliable orbital measurements for every specimen or taxon.</p>
+<p>For the rodent diagnostic figures, principal-axis alignment uses all vertices of the supplied mesh. The largest connected component is then retained for fitting. The spheres illustrate the method's limitation and are not exported as orbital measurements. Use <code>6_verification/verify_all.py</code> to reproduce the avian S4 measurements and the two-rodent inventory.</p>
+<h2 id="sources-and-scope">Sources and scope</h2>
+<p>The bird scans were acquired and processed in the work of Tokita et al. (2017), Al-Mosleh et al. (2021) and Mosleh et al. (2023), and were remeshed for this study. The honeycreeper and cardueline collections come from the Tokita et al. dataset. See the accompanying paper for the specimen lists and preparation method.</p>
+<p>The two rodent examples are <em>Peromyscus gossypinus</em> and <em>P. simulus</em> from the openVertebrate project. The four human examples are drawn from TotalSegmentator (s1397), the Arothron example skull, BodyParts3D and a NiiVue sample head CT. Their preparation and fitting settings are described in the paper.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Reference</th>
+<th style="text-align: left;">Source described</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Tokita et al. (2017), <em>Cranial shape evolution in adaptive radiations of birds: comparative morphometrics of Darwin’s finches and Hawaiian honeycreepers</em></td>
+<td style="text-align: left;">Bird cranial scans</td>
+</tr>
+<tr>
+<td style="text-align: left;">Al-Mosleh et al. (2021), <em>Geometry and dynamics link form, function, and evolution of finch beaks</em></td>
+<td style="text-align: left;">Earlier finch processing</td>
+</tr>
+<tr>
+<td style="text-align: left;">Mosleh et al. (2023), <em>Beak morphometry and morphogenesis across avian radiations</em></td>
+<td style="text-align: left;">Earlier avian processing</td>
+</tr>
+<tr>
+<td style="text-align: left;">openVertebrate; TotalSegmentator; Arothron; BodyParts3D; NiiVue sample images</td>
+<td style="text-align: left;">Additional mammalian examples</td>
+</tr>
+</tbody>
+</table>
+<p>Preserve the original source attributions and check the terms attached to each source dataset before redistribution. The code’s Apache 2.0 license should not be treated as a new license grant for all third-party scans. The source article and Supporting Information contain the fuller provenance references.</p>
+<h2 id="using-the-tables">Using the tables</h2>
+<p>The statistics scripts read the released workbooks in this folder. The fitting scripts write new workbooks under their output folders; those do not automatically replace the released tables. Keep your own inputs in a separate folder and retain the measurement version used in an analysis.</p>
+<p>Specimen names retain their original spelling and capitalization. Measurement tables omit remeshing-parameter columns. Remeshing input settings and run logs remain part of the remeshing workflow; the paper's SI specimen tables provide the finch preprocessing information. See the paper’s specimen lists for taxonomic details.</p></main></div>
+<footer class="footer"><span>SKULL / MORPHOLOGY — RESEARCH GUIDE</span><a href="index.html">Back to the visual guide ↑</a></footer>
+</div></body></html>

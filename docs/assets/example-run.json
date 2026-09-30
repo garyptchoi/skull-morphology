@@ -1,0 +1,49 @@
+{
+  "mesh": "G.DifficilisA.stl",
+  "mesh_sha256": "88a16195b46b8d0439540fdd3345353a914d052d0d211d5782e491b1b09fe982",
+  "mesh_units": "mm (assumed, not inferred from STL)",
+  "settings": {
+    "ROI_START_PERCENT": 0.3,
+    "ROI_END_PERCENT": 0.7,
+    "MIN_ORBIT_RADIUS": 2.0,
+    "MAX_ORBIT_RADIUS": 6.0,
+    "CURVATURE_RADIUS": 2.0,
+    "TARGET_POINT_COUNT": 400,
+    "MAX_SEED_ATTEMPTS": 15,
+    "MIN_COMPONENT": 20
+  },
+  "python": "3.12.14",
+  "packages": {
+    "numpy": "2.2.6",
+    "scipy": "1.13.1",
+    "pandas": "2.3.3",
+    "trimesh": "4.8.3",
+    "rtree": "1.4.1",
+    "networkx": "3.6",
+    "matplotlib": "3.10.8"
+  },
+  "implementation": "4_two_orbits/verify_fit.py:run",
+  "result": {
+    "filename": "G.DifficilisA.stl",
+    "status": "ok",
+    "length_x": 27.6419734954834,
+    "width_y": 15.433545112609863,
+    "height_z": 15.209097385406494,
+    "sphere_radius": 3.5631448892009923,
+    "cx": -4.450332299047177,
+    "cy": -3.4031101845268252,
+    "cz": 1.172711618484361,
+    "curvature": 0.28065095052147665,
+    "seed_attempt": 1,
+    "n_candidates": 144,
+    "n_inliers": 128,
+    "rms_mm": 0.13072991506629417,
+    "fit_err_pct": 3.6689474924947367,
+    "fit_side": "y<0",
+    "centre_frac": 0.48505402880326587,
+    "n_vertices": 2873,
+    "rejected": "",
+    "s4_screen_pass": true
+  },
+  "interpretation": "Numerical success and the S4 screen do not replace visual anatomical inspection."
+}

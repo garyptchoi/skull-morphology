@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reproduce — Skull morphology</title><link rel="stylesheet" href="assets/site.css"></head>
+<body><a class="skip" href="#main">Skip to content</a><div class="shell">
+<header class="masthead"><a class="brand" href="index.html">skull / morphology<small>GEOMETRY · BIOLOGY · CODE</small></a>
+<nav aria-label="Main navigation"><a href="index.html">Overview</a><a href="start-here.html">Start here</a><a class="repo-link" href="https://github.com/kaikwanlau/skull-morphology">GitHub ↗</a></nav></header>
+<div class="article-layout"><aside class="article-nav" aria-label="Guide contents"><a href="index.html">Project overview</a><a href="start-here.html">Start here</a><a href="reproduce.html" aria-current="page">Reproduce</a><a href="reference.html">Script reference</a><a href="data.html">Data sources</a><a href="citation.html">Citation</a></aside><main class="article" id="main"><h1 id="reproduce-the-paper">Reproduce the paper</h1>
+<p>This guide describes the commands for reproducing the analyses from the prepared meshes and measurement workbooks. For new specimens, see the <a href="start-here.html">biologist’s guide</a>.</p>
+<h2 id="environment-and-inputs">Environment and inputs</h2>
+<p>Use Python 3.12 and install <code>requirements.txt</code> in a virtual environment as described in the <a href="start-here.html#1-download-and-install">installation guide</a>. Run the commands below <strong>from the repository root</strong>.</p>
+<p>The main dataset contains 100 skulls of Darwin’s finches and their relatives. The additional 42 honeycreeper skulls and 9 cardueline-relative skulls are used in the applicability analysis in SI Section S4. Two rodent skulls and four human crania provide exploratory examples of the method’s scope and limitations. See <a href="data.html">data sources and scope</a> for the fitting outcomes. The three measurement workbooks are in <code>data/</code>.</p>
+<p>The numerical dependencies are pinned to the supplied study environment. Keep the Python and package versions with any new output. The full requirements file leaves some visualization packages with minimum versions; it is not a complete environment lockfile.</p>
+<h2 id="choose-the-computation">Choose the computation</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Goal</th>
+<th style="text-align: left;">Command</th>
+<th style="text-align: left;">Main output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Fit finch orbital spheres</td>
+<td style="text-align: left;"><code>python 2_fitting/fit_sphere.py</code></td>
+<td style="text-align: left;"><code>2_fitting/output/fit_sphere/measurement_sphere_fitting_ALL.xlsx</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Fit finch neurocranial ellipsoids</td>
+<td style="text-align: left;"><code>python 2_fitting/fit_ellipsoid.py</code></td>
+<td style="text-align: left;"><code>2_fitting/output/fit_ellipsoid/measurement_ellipsoid_fitting_ALL.xlsx</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Compute dimension/orbit correlations</td>
+<td style="text-align: left;"><code>python 3_statistics/correlation.py</code></td>
+<td style="text-align: left;">Console summaries and saved scatter plot</td>
+</tr>
+<tr>
+<td style="text-align: left;">Compute combined parameter correlations</td>
+<td style="text-align: left;"><code>python 3_statistics/correlation_combined.py</code></td>
+<td style="text-align: left;">Console tables</td>
+</tr>
+<tr>
+<td style="text-align: left;">Fit the curvature regression on training data</td>
+<td style="text-align: left;"><code>python 3_statistics/modelling.py</code></td>
+<td style="text-align: left;">Model summary and <code>3_statistics/output/modelling/modelling_results.png</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Inspect both orbital fits</td>
+<td style="text-align: left;"><code>python 4_two_orbits/two_orbit.py</code></td>
+<td style="text-align: left;">CSV and inspection images in <code>4_two_orbits/output/two_orbit/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Redraw selected paper figures</td>
+<td style="text-align: left;"><code>python 5_figures/figure.py --only 4,9,S2</code></td>
+<td style="text-align: left;">PDFs in <code>5_figures/output/figure/figures/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Refit and run encoded numerical checks</td>
+<td style="text-align: left;"><code>python 6_verification/verify_all.py</code></td>
+<td style="text-align: left;"><code>6_verification/output/verify_all/</code></td>
+</tr>
+</tbody>
+</table>
+<p>The interactive fitting scripts show a window for each successful specimen. Close it to continue. Statistics read the released workbooks, not the most recent fitting outputs; generating a new fit workbook does not silently replace the analysis inputs.</p>
+<p><code>modelling.py</code> fits and plots the training data. Its in-sample regression summary is not the held-out test evaluation. Use the verification workflow to inspect the paper’s separate training/test results.</p>
+<h2 id="numerical-verification">Numerical verification</h2>
+<pre><code class="language-bash">python 6_verification/verify_all.py
+</code></pre>
+<p>Read the console and <code>report.md</code>. The principal outputs include:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Output</th>
+<th style="text-align: left;">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>report.md</code>, <code>values.csv</code></td>
+<td style="text-align: left;">Encoded reported values alongside recomputed values</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>SI_tables.html</code></td>
+<td style="text-align: left;">Tables and numerical comparisons in a browser</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>measurements.xlsx</code>, <code>measurements.csv</code></td>
+<td style="text-align: left;">Recomputed finch measurements and diagnostics</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>Dataset_other_taxa.xlsx</code></td>
+<td style="text-align: left;">Recomputed values for the generalization data</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>tables/</code></td>
+<td style="text-align: left;">Reproduced table exports</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>SI_tables.tex</code>, optional <code>SI_tables.pdf</code></td>
+<td style="text-align: left;">TeX source and a PDF when LaTeX is installed</td>
+</tr>
+</tbody>
+</table>
+<p>The verifier compares against values <strong>written into the script</strong>. It does not read the newest manuscript automatically. A passing report means agreement with those encoded values; changes to the manuscript must be checked against them separately.</p>
+<p>The S4 checks use the revised two-rodent inventory. The two rodents are qualitative examples: their orbital measurements are blank in exported tables and excluded from numerical comparison checks. Diagnostic figures can still show the unsuccessful orbit identification. Measurement exports also omit remeshing-parameter columns. S5 checks use the revised bilateral-agreement statements; the removed damaged-versus-intact comparison is excluded. A numerical mismatch gives the verifier a nonzero exit status. The optional PDF also needs a working LaTeX installation; the HTML and numerical outputs do not depend on it.</p>
+<p>The verifier can install missing Python dependencies automatically; run it inside the project environment. With <code>USE_TESTED_VERSIONS = True</code>, it can change installed package versions. With <code>QUICK_RUN = True</code>, it uses stored workbook values instead of refitting the meshes, so that mode is not independent mesh-to-table verification.</p>
+<p>The workflow starts from the prepared meshes; it does not rerun the original remeshing and anatomical alignment. The original scan-derived STL surface shown in Fig. 1(b) is included separately as a figure input. The full collection of original CT scans is not part of this release.</p>
+<h2 id="figures-and-media">Figures and media</h2>
+<pre><code class="language-bash">python 5_figures/figure.py
+python 5_figures/figure.py --eps
+python 5_figures/figure.py --refit
+</code></pre>
+<p>The figure script caches its measurements. Use <code>--refit</code> after changing input meshes or fitting settings. A full figure build may take substantially longer than the one-skull example.</p>
+<p>The four additional inputs for Fig. 1(a-b) and Fig. S1 are included: the referenced photograph, the original scan-derived skull surface and two earlier-remeshed skulls. Source links, licences and checksums are documented in <a href="figure-inputs.html">figure inputs and sources</a>. The photograph is stored as its original JPEG and cropped by the figure script.</p>
+<p>Use the released prepared meshes for the analysis workflow. Keep the raw and earlier-remeshing inputs in their separate figure folders so that the panels show the correct processing stages. If a file is removed, its panel becomes a labelled blank. Including all figure inputs does not establish agreement with every numerical result; use the verification workflow above for that check.</p>
+<p>To regenerate the original short animation:</p>
+<pre><code class="language-bash">python 5_figures/demo_animation.py
+</code></pre>
+<p>This needs PyVista and ffmpeg for the MP4 and optimized GIF. Results go to <code>5_figures/output/demo_animation/</code>. Copy the regenerated GIF to the repository root only after checking it.</p>
+<h2 id="interpretation-and-scope">Interpretation and scope</h2>
+<p>The geometric extraction and the statistical prediction are distinct steps. Retain the study’s preparation assumptions, mesh units, orientation and version information when comparing measurements. The empirical curvature model is bounded by its training domain; fit transfer to another taxon does not establish prediction transfer.</p>
+<p><a href="index.html">Back to overview</a> · <a href="reference.html">Script reference</a></p></main></div>
+<footer class="footer"><span>SKULL / MORPHOLOGY — RESEARCH GUIDE</span><a href="index.html">Back to the visual guide ↑</a></footer>
+</div></body></html>
