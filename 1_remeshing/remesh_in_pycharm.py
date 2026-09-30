@@ -3,7 +3,7 @@
 import argparse, glob, io, os, shutil, subprocess, sys, time
 import pandas as pd
 
-PARA_DEFAULT = 40
+PARA_DEFAULT = 60
 PARA = {
 }
 SEED       = 0

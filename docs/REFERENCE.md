@@ -21,7 +21,7 @@ The MATLAB source is included in `1_remeshing/Remeshing/`. Install MATLAB and it
 | `1_remeshing/remesh_in_pycharm.py` | Watches the raw-input folder and calls MATLAB to write remeshed STLs and run logs; `--once` processes the current files and exits |
 | `1_remeshing/remesh_human_head_in_pycharm.py` | The same remeshing-only workflow, with a default remeshing parameter of 60 |
 
-The bird wrapper currently sets `PARA_DEFAULT = 40`. It is a tool for new raw inputs, not an automated replay of the specimen-specific preprocessing used to produce the released meshes. Use the already released meshes for the documented reproduction route; document the settings used for new raw scans.
+Both Python wrappers and the MATLAB batch function use a default remeshing parameter of 60. These are tools for new raw inputs, not an automated replay of the specimen-specific preprocessing used to produce the released meshes. Use the already released meshes for the documented reproduction route; document the settings used for new raw scans.
 
 ## 2. Fitting
 

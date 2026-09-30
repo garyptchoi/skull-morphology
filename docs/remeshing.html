@@ -33,7 +33,7 @@ setup_remeshing('RebuildMex', true)
 </code></pre>
 <p>The wrapper finds this MATLAB folder automatically. It accepts STL, PLY, OBJ and OFF inputs, converts them to STL when needed, and writes remeshed STL files and run logs. It stops after remeshing. It uses MATLAB Engine when available, otherwise <code>matlab -batch</code>. If MATLAB is not on your system path, pass <code>--matlab</code> with the full path to the MATLAB executable.</p>
 <p><code>--overwrite</code> refreshes the staged raw inputs and remeshes them again. MATLAB errors and missing output meshes return a nonzero exit status. A successful process still needs a check of the output geometry.</p>
-<p>The human wrapper performs the same remeshing steps with a default remeshing parameter of 60. Fitting is a separate operation in <code>2_fitting/</code>. To inspect a prepared mesh after remeshing, run:</p>
+<p>Both Python wrappers perform the same remeshing steps and use a default remeshing parameter of 60. Fitting is a separate operation in <code>2_fitting/</code>. To inspect a prepared mesh after remeshing, run:</p>
 <pre><code class="language-bash">python 2_fitting/check_orbit.py --folder 1_remeshing/dataset_remeshed --results 2_fitting/output/check_orbit --no-show
 </code></pre>
 <p>The human fitting script in <code>2_fitting/</code> reproduces the released human fits with the paper's 10–50% search band and 2–60 mm radius range.</p>
@@ -41,13 +41,13 @@ setup_remeshing('RebuildMex', true)
 <pre><code class="language-csv">filename,para,reason
 specimen.stl,60,chosen after inspecting the surface
 </code></pre>
-<p>Use the <code>.stl</code> filename here even when the original scan is PLY, OBJ or OFF. The bird wrapper uses <code>PARA_DEFAULT = 40</code> for files without an override. Choose the parameter by inspecting the resulting surface; these defaults do not reproduce every specimen's original preprocessing.</p>
+<p>Use the <code>.stl</code> filename here even when the original scan is PLY, OBJ or OFF. Both wrappers use <code>PARA_DEFAULT = 60</code> for files without an override. Choose the parameter by inspecting the resulting surface; these defaults do not reproduce every specimen's original preprocessing.</p>
 <h2 id="use-matlab-directly">Use MATLAB directly</h2>
 <p>From <code>1_remeshing/Remeshing/</code>:</p>
 <pre><code class="language-matlab">remesh_batch('../dataset_CT', '../dataset_remeshed', '../params.csv', ...
     'MeshFix', true, 'Rescale', false, 'Seed', 0)
 </code></pre>
-<p>Direct MATLAB input must be STL. Without a parameter CSV, <code>remesh_batch('../dataset_CT', '../dataset_remeshed')</code> uses <code>para = 60</code>. MATLAB and Python therefore have different defaults; pass a parameter CSV when comparing runs.</p>
+<p>Direct MATLAB input must be STL. Without a parameter CSV, <code>remesh_batch('../dataset_CT', '../dataset_remeshed')</code> uses <code>para = 60</code>. MATLAB and both Python wrappers use the same default. A parameter CSV can override it for individual specimens.</p>
 <p>To try the original scan-derived surface included for Fig. 1, run this after setup from <code>1_remeshing/Remeshing/</code>:</p>
 <pre><code class="language-matlab">remesh_batch('../../data/figure_inputs/raw_meshes', ...
              '../../output/raw_mesh_test', '', 'Seed', 0)
