@@ -16,6 +16,12 @@ HUMAN_FIT = dict(ROI_START_PERCENT=0.10, ROI_END_PERCENT=0.50,
                  MIN_ORBIT_RADIUS=2.0, MAX_ORBIT_RADIUS=60.0,
                  CURVATURE_RADIUS=2.0, TARGET_POINT_COUNT=400,
                  MAX_SEED_ATTEMPTS=15)
+# Reviewed orbital seed coordinates in the orient_principal_axes() mesh frame.
+# Keep the repository's original Gossypinua filename; its species label is P. gossypinus.
+PEROMYSCUS_ORBIT_SEEDS = {
+    "Peromyscus_Gossypinua_watertight": (2.7077090740203857, -1.6156260967254639, -4.044004440307617),
+    "Peromyscus_Simulus_Watertight": (3.2707574367523193, -0.3951239585876465, -3.407453775405884),
+}
 OUT_DIR = str(_OUT / "figures")
 CACHE_DIR = str(_OUT / "figure_cache")
 
@@ -174,7 +180,7 @@ def fit_sphere_iteratively(points, max_iterations=3, outlier_std_dev=2.0):
 
 def run(file_path, ROI_START_PERCENT=0.30, ROI_END_PERCENT=0.70, MIN_ORBIT_RADIUS=2.0, MAX_ORBIT_RADIUS=6.0,
         CURVATURE_RADIUS=2.0, TARGET_POINT_COUNT=400, MAX_SEED_ATTEMPTS=15, MIN_COMPONENT=20,
-        record_unclipped=False, half=None):
+        record_unclipped=False, half=None, seed_hint=None):
     original_mesh = trimesh.load_mesh(file_path)
     components = original_mesh.split(only_watertight=False)
     if len(components) > 1:
@@ -195,6 +201,8 @@ def run(file_path, ROI_START_PERCENT=0.30, ROI_END_PERCENT=0.70, MIN_ORBIT_RADIU
     elif half == 'y>0':
         roi_mask = np.logical_and(roi_mask, processed_mesh.vertices[:, 1] > 0)
     if not np.any(roi_mask):
+        if seed_hint is not None:
+            return dict(filename=os.path.basename(file_path), status='empty_seed_roi', selection_mode='reviewed_seed')
         roi_mask = np.ones(len(processed_mesh.vertices), dtype=bool)
 
     mean_curvatures = trimesh.curvature.discrete_mean_curvature_measure(
@@ -203,13 +211,21 @@ def run(file_path, ROI_START_PERCENT=0.30, ROI_END_PERCENT=0.70, MIN_ORBIT_RADIU
     curvatures_in_roi[~roi_mask] = 1.0
     sorted_curvature_indices_local = np.argsort(curvatures_in_roi)
     top_N_seed_indices = np.arange(len(processed_mesh.vertices))[sorted_curvature_indices_local[:MAX_SEED_ATTEMPTS]]
-    if curvatures_in_roi[top_N_seed_indices[0]] == 1.0:
+    if seed_hint is None and curvatures_in_roi[top_N_seed_indices[0]] == 1.0:
         return dict(filename=os.path.basename(file_path), status='no_concave')
 
     sorted_indices = np.argsort(mean_curvatures)
     initial_mask = np.zeros(len(processed_mesh.vertices), dtype=bool)
     initial_mask[sorted_indices[:TARGET_POINT_COUNT]] = True
     valid_indices_mask = np.logical_and(initial_mask, roi_mask)
+    if seed_hint is not None:
+        hint = np.asarray(seed_hint, dtype=float)
+        if hint.shape != (3,) or not np.isfinite(hint).all():
+            raise ValueError("seed_hint must contain three finite mesh coordinates")
+        eligible = np.flatnonzero(valid_indices_mask)
+        if not len(eligible):
+            return dict(filename=os.path.basename(file_path), status='no_seed_candidates', selection_mode='reviewed_seed')
+        top_N_seed_indices = eligible[[np.argmin(np.linalg.norm(processed_mesh.vertices[eligible] - hint, axis=1))]]
 
     rejected = []
     for attempt, seed_index in enumerate(top_N_seed_indices):
@@ -226,8 +242,12 @@ def run(file_path, ROI_START_PERCENT=0.30, ROI_END_PERCENT=0.70, MIN_ORBIT_RADIU
                     if seed_index in component:
                         final_indices = np.array(component)
                         break
-                if len(final_indices) == 0:
+                if len(final_indices) == 0 and seed_hint is None:
                     final_indices = np.array(max(comps, key=len))
+        if seed_hint is not None and len(final_indices) == 0:
+            return dict(filename=os.path.basename(file_path), status='seed_component_missing',
+                        selection_mode='reviewed_seed', length_x=box_extents[0],
+                        width_y=box_extents[1], height_z=box_extents[2])
         if len(final_indices) < MIN_COMPONENT:
             rejected.append((attempt + 1, f'small_component_{len(final_indices)}'))
             continue
@@ -252,6 +272,9 @@ def run(file_path, ROI_START_PERCENT=0.30, ROI_END_PERCENT=0.70, MIN_ORBIT_RADIU
                    n_vertices=len(processed_mesh.vertices),
                    rejected=';'.join(f'{a}:{r}' for a, r in rejected))
         out['_inliers'] = final_points; out['_seed'] = processed_mesh.vertices[seed_index]
+        if seed_hint is not None:
+            out.update(selection_mode='reviewed_seed', seed_hint_x=hint[0], seed_hint_y=hint[1], seed_hint_z=hint[2],
+                       seed_hint_distance_mm=float(np.linalg.norm(processed_mesh.vertices[seed_index] - hint)))
         if record_unclipped:
             valid_full = initial_mask.copy()
             ve = valid_full[processed_mesh.edges].all(axis=1)
@@ -264,9 +287,12 @@ def run(file_path, ROI_START_PERCENT=0.30, ROI_END_PERCENT=0.70, MIN_ORBIT_RADIU
                     break
             out['n_candidates_unclipped'] = n_full
         return out
-    return dict(filename=os.path.basename(file_path), status='all_seeds_failed',
+    out = dict(filename=os.path.basename(file_path), status='all_seeds_failed',
                 length_x=box_extents[0], width_y=box_extents[1], height_z=box_extents[2],
                 rejected=';'.join(f'{a}:{r}' for a, r in rejected))
+    if seed_hint is not None:
+        out['selection_mode'] = 'reviewed_seed'
+    return out
 
 
 
@@ -434,6 +460,51 @@ def oriented_peromyscus_dir():
     return out
 
 
+def peromyscus_orbit_fit(stl):
+    stem = os.path.splitext(os.path.basename(stl))[0]
+    hint = PEROMYSCUS_ORBIT_SEEDS.get(stem)
+    if hint is None:
+        raise ValueError(f"no reviewed orbital seed configured for {stem}; use run() for an automatic diagnostic fit")
+    r = _memo(("peromyscus_orbit", stl, hint), lambda: run(stl, seed_hint=hint))
+    if r.get('status') != 'ok':
+        raise RuntimeError(f"no orbital sphere fit for {stl} (status: {r.get('status')}; {r.get('rejected', '')})")
+    # In these PCA-oriented rodent meshes, z is mediolateral and y is dorsoventral.
+    r['fit_side'] = 'z<0' if r['cz'] < 0 else 'z>0'
+    return r
+
+
+def peromyscus_reviewed_measurements(other):
+    updated = other.copy()
+    original_columns = set(other.columns)
+    if 'filename' not in updated:
+        return updated
+    for stem in PEROMYSCUS_ORBIT_SEEDS:
+        matches = updated.filename.eq(stem + '.stl')
+        if not matches.any():
+            continue
+        capture_automatic = 'selection_mode' not in other or not other.loc[matches, 'selection_mode'].eq('reviewed_seed').all()
+        stl = os.path.join(oriented_peromyscus_dir(), stem + '.stl')
+        r = peromyscus_orbit_fit(stl)
+        for key, value in r.items():
+            if key.startswith('_') or key == 'filename':
+                continue
+            automatic_key = 'automatic_' + key
+            if capture_automatic and key in original_columns and automatic_key not in updated:
+                updated[automatic_key] = updated[key]
+            if key not in updated:
+                updated[key] = None
+            updated.loc[matches, key] = value
+    rodent_rows = updated.filename.str.startswith('Peromyscus_', na=False)
+    for key in ('status_second', 'r_second', 'n_inliers_second', 'fit_err_pct_second', 'cx2', 'cy2', 'cz2'):
+        if key not in updated:
+            continue
+        automatic_key = 'automatic_' + key
+        if automatic_key not in updated:
+            updated[automatic_key] = updated[key]
+        updated.loc[rodent_rows, key] = 'not_evaluated' if key == 'status_second' else np.nan
+    return updated
+
+
 def _topology(file_path):
     m = trimesh.load_mesh(file_path)
     comps = m.split(only_watertight=False)
@@ -487,7 +558,7 @@ def get_measurements(refit=False):
             parts.append(measure_folder(oriented_peromyscus_dir(), "Peromyscus"))
         (pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(
             columns=["filename", "folder", "status", "n_inliers", "fit_err_pct"])).to_csv(other_csv, index=False)
-    return pd.read_csv(finch_csv), pd.read_csv(other_csv)
+    return pd.read_csv(finch_csv), peromyscus_reviewed_measurements(pd.read_csv(other_csv))
 
 
 def meets_criteria(n_inliers, fit_err_pct):
@@ -2528,19 +2599,15 @@ def _beak_to_the_right(axes, V, sgn):
 
 
 def _gallery_cell(fig, g, folder, stem, label):
-    sub = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=g, height_ratios=[1.05, 0.95], hspace=0.02)
-    ax1 = fig.add_subplot(sub[0]); ax2 = fig.add_subplot(sub[1])
+    ax = fig.add_subplot(g)
     stl = os.path.join(folder, stem + '.stl')
     if not os.path.isfile(stl):
         raise Skip(f'mesh not found: {stl}')
     r = _gallery_fit(stl); big = load_big(stl)
     c = np.array([r['cx'], r['cy'], r['cz']]); R = r['sphere_radius']; side = np.sign(c[1])
-    lateral(ax1, big, c, R, r['_inliers'], side, seed=r['_seed'])
-    section(ax2, big, c, R, r['_inliers'], side, plane='z')
-    _beak_to_the_right((ax1, ax2), big.vertices, 1.0 if side > 0 else -1.0)
-    ax1.set_title(label, fontsize=GALLERY_TITLE_SIZE, style='italic', pad=1.0)
-    ax2.text(0.5, -0.03, f"fit error {r['fit_err_pct']:.1f}%", transform=ax2.transAxes, ha='center', va='top',
-             fontsize=GALLERY_TEXT_SIZE)
+    lateral(ax, big, c, R, r['_inliers'], side, seed=r['_seed'])
+    _beak_to_the_right((ax,), big.vertices, 1.0 if side > 0 else -1.0)
+    ax.set_title(label, fontsize=GALLERY_TITLE_SIZE, style='italic', pad=1.0)
 
 
 HUMAN_PURPLE = "#6a3d9a"
@@ -2575,15 +2642,13 @@ def _gallery_human_cell(fig, spec, h):
     ax.set_aspect('equal'); ax.set_axis_off()
     if side > 0:
         ax.invert_xaxis()
-    ax.set_title("$\\it{H.\\ sapiens}$\n(" + h["name"] + ")", fontsize=GALLERY_TITLE_SIZE, pad=1.0)
-    ax.text(0.5, -0.03, f"fit error {h['fit_err_pct']:.1f}%",
-            transform=ax.transAxes, ha='center', va='top', fontsize=GALLERY_TEXT_SIZE)
+    ax.set_title("$\\it{H.\\ sapiens}$", fontsize=GALLERY_TITLE_SIZE, pad=1.0)
 
 
 def _gallery_pero_cell(ax, stem, label):
-    stl = os.path.join(oriented_peromyscus_dir(), stem + '.stl'); r = _gallery_fit(stl); m = mesh_of(stl)
+    stl = os.path.join(oriented_peromyscus_dir(), stem + '.stl'); r = peromyscus_orbit_fit(stl); m = mesh_of(stl)
     c = np.array([r['cx'], r['cy'], r['cz']]); R = r['sphere_radius']
-    B = camera((0, 0, 1), (0, -1, 0))
+    B = camera((0, 0, 1 if c[2] >= 0 else -1), (0, -1, 0))
     V2 = draw_mesh(ax, m, B, alpha=0.55)
     _gallery_sphere(ax, c, R, B, np.ptp(V2, axis=0).max())
     if S4_POINT_SCALE:
@@ -2596,15 +2661,13 @@ def _gallery_pero_cell(ax, stem, label):
     if tip[0] < (lo[0] + hi[0]) / 2:
         ax.invert_xaxis()
     ax.set_title(label, fontsize=GALLERY_TITLE_SIZE, style='italic', pad=1.0)
-    ax.text(0.5, -0.03, f"fit error {r['fit_err_pct']:.1f}%",
-            transform=ax.transAxes, ha='center', va='top', fontsize=GALLERY_TEXT_SIZE)
 
 
 def make_gallery_figure(finch, other):
     folders = {'HC': _p(HC_DIR), 'CR': _p(CR_DIR)}
     humans = human_results()
-    fig = plt.figure(figsize=(7.4, 6.9))
-    gs = gridspec.GridSpec(3, 6, figure=fig, height_ratios=[1, 1, 0.95], hspace=0.36, wspace=0.08)
+    fig = plt.figure(figsize=(7.4, 3.8))
+    gs = gridspec.GridSpec(3, 6, figure=fig, height_ratios=[1, 1, 1.8], hspace=0.18, wspace=0.08)
 
     for ri, row in enumerate(GALLERY_ROWS):
         for ci, (key, stem, label) in enumerate(row):
@@ -2618,7 +2681,20 @@ def make_gallery_figure(finch, other):
         print(f"  H. sapiens ({h['name']})", flush=True)
         _gallery_human_cell(fig, gs[2, 2 + ci], h)
 
-    fig.subplots_adjust(left=0.01, right=0.995, top=0.96, bottom=0.07)
+    fig.subplots_adjust(left=0.01, right=0.995, top=0.96, bottom=0.02)
+    # Balance visible row gaps around the taller human meshes.
+    for row, offset_pt in ((1, 6.0), (2, 7.0)):
+        for ax in fig.axes[6 * row:6 * (row + 1)]:
+            pos = ax.get_position()
+            ax.set_position([pos.x0, pos.y0 + offset_pt / (72 * fig.get_figheight()), pos.width, pos.height])
+    # Trim bottom whitespace while preserving panel sizes and positions from the top.
+    old_height = fig.get_figheight()
+    positions = [ax.get_position().frozen() for ax in fig.axes]
+    new_height = old_height - 12 / 72
+    fig.set_size_inches(fig.get_figwidth(), new_height)
+    for ax, pos in zip(fig.axes, positions):
+        ax.set_position([pos.x0, (pos.y0 * old_height - 12 / 72) / new_height,
+                         pos.width, pos.height * old_height / new_height])
     save(fig, 'FIG_other_taxa_fits')
 
 
@@ -2635,12 +2711,20 @@ def human_pairs():
 FIG13_GREY = "#8c8c8c"
 FIG13_PERO_BROWN = "#8c564b"
 FIG13_EXAMPLES = [("Darwin's finch", FIG13_GREY, "FINCH", "G.DifficilisA", "Geospiza difficilis"),
-                  ("Hawaiian honeycreeper", HC_RED, "HC", 'L. caeruleirostrisA', "Loxops caeruleirostris"),
+                  ("Hawaiian honeycreeper", HC_RED, "HC", 'V. coccineaB', "Vestiaria coccinea"),
                   ("rodent", FIG13_PERO_BROWN, "PERO", "Peromyscus_Simulus_Watertight", "Peromyscus simulus"),
                   ("human cranium", HUMAN_PURPLE, "HUMAN", "BodyParts3D", "Homo sapiens")]
 FIG13_DAMAGED = 'L. caeruleirostrisA'
 FIG13_WIRE_N = {"FINCH": 16, "HC": 16, "PERO": 12, "HUMAN": 8}
 FIG13_WIRE_LW = 0.3
+# All four summary groups share one material and camera-relative light.
+# Render the honeycreeper from its mesh here; the gallery uses a different shader.
+SUMMARY_MESH_STYLE = dict(alpha=0.55, rgb=(0.80, 0.80, 0.80), ambient=0.42,
+                          light=(-0.35, 0.45, 1.0), cull=False)
+
+
+def _f13_mesh(ax, mesh, B):
+    return draw_mesh(ax, mesh, B, **SUMMARY_MESH_STYLE)
 
 
 def _f13_title(fig, cell, group, colour, species):
@@ -2674,7 +2758,7 @@ def _f13_bird_cell(ax, folder, stem, wire_n):
     V = m.vertices
     c = np.array([r["cx"], r["cy"], r["cz"]])
     B = camera((0, 1.0 if c[1] >= 0 else -1.0, 0), (0, 0, 1))
-    V2 = draw_mesh(ax, m, B, alpha=0.55)
+    V2 = _f13_mesh(ax, m, B)
     _f13_sphere_and_seed(ax, c, r["sphere_radius"], r["_seed"], B, wire_n)
     lo, hi = _f13_frame(ax, V2)
     x = V[:, 0]; xl, xh = np.percentile(x, [2, 98])
@@ -2695,11 +2779,11 @@ def _f13_bird_cell(ax, folder, stem, wire_n):
 
 def _f13_pero_cell(ax, stem, wire_n):
     stl = os.path.join(oriented_peromyscus_dir(), stem + ".stl")
-    r = _gallery_fit(stl)
+    r = peromyscus_orbit_fit(stl)
     m = mesh_of(stl)
     c = np.array([r["cx"], r["cy"], r["cz"]])
-    B = camera((0, 0, 1), (0, -1, 0))
-    V2 = draw_mesh(ax, m, B, alpha=0.55)
+    B = camera((0, 0, 1 if c[2] >= 0 else -1), (0, -1, 0))
+    V2 = _f13_mesh(ax, m, B)
     _f13_sphere_and_seed(ax, c, r["sphere_radius"], r["_seed"], B, wire_n)
     lo, hi = _f13_frame(ax, V2)
     tip = to_screen(m.vertices[np.argmax(m.vertices[:, 0])], B)[0][0]
@@ -2714,17 +2798,20 @@ def _f13_human_cell(ax, h, wire_n):
     side = 1.0 if c[1] >= m.vertices[:, 1].mean() else -1.0
     a = np.radians(35)
     B = camera((-np.cos(a), side * np.sin(a), 0.3), (0, 0, 1))
-    V2 = draw_mesh(ax, m, B, alpha=0.55)
+    V2 = _f13_mesh(ax, m, B)
     _f13_sphere_and_seed(ax, c, h["sphere_radius"], h["_seed"], B, wire_n)
     _f13_frame(ax, V2, pad_frac=0.05)
 
 
 def fig13_generalization(finch, other):
+    other = peromyscus_reviewed_measurements(other)
     humans = human_results()
     folders = {"FINCH": _p(FINCH_MESH_DIR), "HC": _p(HC_DIR), "CR": _p(CR_DIR)}
     fig = plt.figure(figsize=(7.4, 5.1))
     top = gridspec.GridSpec(1, 4, figure=fig, left=0.02, right=0.99, top=0.84, bottom=0.595, wspace=0.08)
-    bot = gridspec.GridSpec(1, 2, figure=fig, left=0.085, right=0.985, top=0.455, bottom=0.105, wspace=0.34,
+    plot_offset = 20 / (72 * fig.get_figheight())
+    bot = gridspec.GridSpec(1, 2, figure=fig, left=0.085, right=0.985,
+                            top=0.455 + plot_offset, bottom=0.105 + plot_offset, wspace=0.34,
                             width_ratios=[2.05, 1])
 
     for i, (group, colour, key, stem, species) in enumerate(FIG13_EXAMPLES):
@@ -2738,7 +2825,6 @@ def fig13_generalization(finch, other):
             r = _f13_bird_cell(ax, folders[key], stem, FIG13_WIRE_N[key])
         cell = top[0, i].get_position(fig)
         _f13_title(fig, cell, group, colour, species)
-        _f13_caption(fig, cell, r)
 
     axb = fig.add_subplot(bot[0, 0])
     ok = other[other.status == "ok"]
@@ -2751,7 +2837,6 @@ def fig13_generalization(finch, other):
                            (pero, FIG13_PERO_BROWN, "$\\it{Peromyscus}$ rodents", 5),
                            (hum, HUMAN_PURPLE, "human crania", 4)):
         axb.scatter(d.n_inliers, d.fit_err_pct, s=12, c=col, lw=0, zorder=z, label=f"{lab} ($n$ = {len(d)})")
-    axb.axhline(10, ls="--", lw=0.7, c="k", zorder=0)
     axb.set_xlim(0, 175); axb.set_ylim(0, 23)
     axb.set_xlabel("number of inliers", fontsize=9); axb.set_ylabel("fit error (% of radius)", fontsize=9)
     axb.tick_params(labelsize=8)
@@ -2786,6 +2871,17 @@ def fig13_generalization(finch, other):
         p = ax.get_position()
         fig.text(p.x0 - 0.075, p.y1 + 0.045, letter, fontsize=18, fontfamily="serif", va="top")
     print(f"  (b) n = {len(fin)}, {len(hcr)}, {len(pero)}, {len(hum)};  (c) n = {counts[0][0]}, {counts[1][0]}")
+    # Trim the freed bottom space without changing panel or text sizes.
+    old_height = fig.get_figheight()
+    positions = [ax.get_position().frozen() for ax in fig.axes]
+    text_positions = [t.get_position() for t in fig.texts]
+    new_height = old_height - 20 / 72
+    fig.set_size_inches(fig.get_figwidth(), new_height)
+    for ax, pos in zip(fig.axes, positions):
+        ax.set_position([pos.x0, (pos.y0 * old_height - 20 / 72) / new_height,
+                         pos.width, pos.height * old_height / new_height])
+    for text, (x, y) in zip(fig.texts, text_positions):
+        text.set_position((x, (y * old_height - 20 / 72) / new_height))
     save(fig, "FIG_generalization")
 
 
@@ -2794,7 +2890,7 @@ EPS_NAMES = {"FIG_overview_revised": "Fig1", "FIG_bounding": "Fig2", "FIG_orbit_
              "FIG_ellipsoid_examples": "Fig7", "FIG_plots_with_data_and_tree_revised3": "Fig8",
              "FIG_correlation_revised_v4": "Fig9", "FIG_Actual_VS_Model_Curvature_revised3": "Fig10",
              "FIG_normalized_by_genus_v3": "Fig11", "FIG_morphospace_2panel_revised_v3": "Fig12",
-             "FIG_generalization": "Fig13", "FIG_other_taxa_fits": "Fig14"}
+             "FIG_other_taxa_fits": "Fig13", "FIG_generalization": "Fig14"}
 
 
 def save(fig, stem):
@@ -2819,8 +2915,8 @@ def figure_list(finch, other, d):
             ("7", "Fig 7", fig07_ellipsoid_examples, R),
             ("8", "Fig 8", lambda: fig08(d), P), ("9", "Fig 9", lambda: fig09(d), P),
             ("10", "Fig 10", lambda: fig10(d), P), ("11", "Fig 11", lambda: fig11(d), P),
-            ("12", "Fig 12", lambda: fig12(d), P), ("13", "Fig 13", lambda: fig13_generalization(finch, other), R),
-            ("14", "Fig 14", lambda: make_gallery_figure(finch, other), R),
+            ("12", "Fig 12", lambda: fig12(d), P), ("13", "Fig 13", lambda: make_gallery_figure(finch, other), R),
+            ("14", "Fig 14", lambda: fig13_generalization(finch, other), R),
             ("S1", "Fig S1", figS1_remeshing, R),
             ("S2", "Fig S2", figS8_definitions, S),
             ("S3", "Fig S3", figS5_width_location, S),
