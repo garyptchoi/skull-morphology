@@ -1979,8 +1979,8 @@ def fig13_honeycreeper_examples():
         m, r = mesh_of(path), sphere_of(path)
         c, R = np.array([r["cx"], r["cy"], r["cz"]]), r["sphere_radius"]
         dy = shift[row]
-        page_text(fig, headers[row][0], headers[row][1], f"({'ab'[row]})", 9, fontweight="bold",
-                  family="sans-serif")
+        page_text(fig, headers[row][0], headers[row][1], f"({'ab'[row]})", 9, fontweight="normal",
+                  family="serif")
         for v, ((eye, up), (label, *label_xy)) in enumerate(zip(views, view_labels)):
             box = lay["panels"][3 * row + v]
             box = (box[0], box[1] - dy, box[2], box[3] - dy)
