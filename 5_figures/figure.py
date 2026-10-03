@@ -1971,7 +1971,7 @@ def fig13_honeycreeper_examples():
     view_labels = [("oblique (behind, right, above)", (92.05, 193.2), (91.65, 415.8)),
                    ("right lateral (from $+y$)", (257.75, 179.3), (257.0, 408.3)),
                    ("dorsal (from $+z$, anterior at top)", (414.65, 215.7), (408.95, 442.5))]
-    headers, bars = ((20.7, 14.0), (20.7, 206.0)), (((31.6, 177.5), (47.65, 174.3)), ((30.4, 401.6), (43.4, 399.0)))
+    headers, bars = ((14.7, 20.0), (14.7, 206.0)), (((31.6, 177.5), (47.65, 174.3)), ((30.4, 401.6), (43.4, 399.0)))
     for row, (stem, species) in enumerate(SPECIMENS["honeycreepers"]):
         path = os.path.join(_p(HC_DIR), stem + ".stl")
         if not os.path.isfile(path):
@@ -1979,7 +1979,7 @@ def fig13_honeycreeper_examples():
         m, r = mesh_of(path), sphere_of(path)
         c, R = np.array([r["cx"], r["cy"], r["cz"]]), r["sphere_radius"]
         dy = shift[row]
-        page_text(fig, headers[row][0], headers[row][1], f"({'ab'[row]})", 9, fontweight="normal",
+        page_text(fig, headers[row][0], headers[row][1], f"({'ab'[row]})", 18, fontweight="normal",
                   family="serif")
         for v, ((eye, up), (label, *label_xy)) in enumerate(zip(views, view_labels)):
             box = lay["panels"][3 * row + v]
