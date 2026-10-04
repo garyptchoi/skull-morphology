@@ -4,7 +4,8 @@ Code and data for the paper *Robust Parametric Estimation of Avian Cranial Morph
 
 The Python scripts estimate skull dimensions, orbital radius and neurocranial shape from prepared 3D skull meshes. The repository includes the study datasets, fitting scripts, statistical analyses and instructions for using the code with other specimens.
 
-[Read the paper](https://arxiv.org/abs/2511.06426) · [Start with one skull](docs/START_HERE.md) · [Use your own data](docs/START_HERE.md#use-your-own-skulls) · [Reproduce the paper](docs/REPRODUCE.md)
+[Read the paper](https://arxiv.org/abs/2511.06426) · [Start with one skull](docs/START_HERE.md) · [Use your own data](docs/START_HERE.md#use-your-own-skulls) · [Reproduce the paper](docs/REPRODUCE.md) · [Guideline Website](https://kaikwanlau.github.io/skull-morphology/
+) 
 
 <p align="center"><a href="docs/assets/demo.mp4"><img src="demo.gif" width="800" alt="A real skull mesh progresses through a bounding box, curvature-based orbit selection, a fitted sphere and a braincase ellipsoid." /></a></p>
 
