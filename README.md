@@ -9,8 +9,6 @@ The Python scripts estimate skull dimensions, orbital radius and neurocranial sh
 
 <p align="center"><a href="docs/assets/demo.mp4"><img src="demo.gif" width="800" alt="A real skull mesh progresses through a bounding box, curvature-based orbit selection, a fitted sphere and a braincase ellipsoid." /></a></p>
 
-<p align="center"><sub>18.8-second method overview · <a href="docs/assets/demo.mp4">MP4 version</a> · <a href="docs/assets/tutorial.mp4">7:09 guided tutorial</a></sub></p>
-
 ## Documentation
 
 | Task | Guide |
