@@ -1,0 +1,145 @@
+{
+  "checked_at": "2026-09-29",
+  "files": [
+    {
+      "path": "photo/C.pallidus.jpg",
+      "bytes": 1767746,
+      "sha256": "20a5521c3f922bf2c9f001ee4def10de4a5debb3fd92b6f310f4c1cfb32ceeb9",
+      "sha1": "ad4d26a930222163d515ba26a3d94879a8b4a1b2",
+      "md5": "471edaaf842ccd16bb584c1a0b03dbcd",
+      "git_blob_sha1": "6ff3edde6e9cd889b2131ca733b15f89f129bb8f",
+      "bytes_unchanged_from_source": true,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Camarhynchus_pallidus_12789263.jpg",
+      "download_url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Camarhynchus_pallidus_12789263.jpg",
+      "author": "Julien Renoult",
+      "date": "2017-03-27",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "original_source": "https://www.inaturalist.org/photos/12789263",
+      "width": 2048,
+      "height": 1365,
+      "processing": "Original JPEG retained unchanged; existing figure script applies a crop when rendering."
+    },
+    {
+      "path": "raw_meshes/P2.InornataA.stl",
+      "bytes": 16181434,
+      "sha256": "010fbd5edb1ccd8cc0e2fa821b1818ac042228309ef3f66eba006ab8c8f44dc8",
+      "sha1": "6fe03b87785b07d2f410528f6462f5b3148f4f81",
+      "md5": "c5ea84293cecb28510cf35d1ee3ab56e",
+      "git_blob_sha1": "5ff4185bb8beeec867c17d4fb611d88dd9cc7b55",
+      "bytes_unchanged_from_source": true,
+      "triangle_count": 323627,
+      "source_url": "https://doi.org/10.7910/DVN/IHODX1",
+      "download_url": "https://dataverse.harvard.edu/api/access/datafile/5193531",
+      "source_dataset_version": "2.0",
+      "source_file_id": 5193531,
+      "source_path": "Meshes/Full Skulls STL/P2.InornataA.stl",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_checksum": {
+        "algorithm": "MD5",
+        "value": "c5ea84293cecb28510cf35d1ee3ab56e"
+      },
+      "unique_vertex_count": 161872,
+      "finite_vertices": true,
+      "bounds_mm": [
+        [
+          -18.384294509887695,
+          8.737100601196289
+        ],
+        [
+          -7.487955570220947,
+          6.539113998413086
+        ],
+        [
+          -6.9454193115234375,
+          7.255810737609863
+        ]
+      ],
+      "source_dataset_author": "Salem Al Mosleh",
+      "source_dataset_title": "Code and Data"
+    },
+    {
+      "path": "prior_remeshing/C.PallidusA.stl",
+      "bytes": 146384,
+      "sha256": "d3b55439d3c6a9b8fafc82e6c77dba95aece0e4c9349c5b10020e34a90b6a9e2",
+      "sha1": "391bac12ec59233018ae3a1627cec6ea3ac76108",
+      "md5": "e2798e7bbcd3f8e1542be4923a2f1ac7",
+      "git_blob_sha1": "5c749e149c44592568e8b85a29b343b00989a243",
+      "bytes_unchanged_from_source": true,
+      "triangle_count": 2926,
+      "source_url": "https://doi.org/10.7910/DVN/UQQ6EZ",
+      "download_url": "https://dataverse.harvard.edu/api/access/datafile/6947348",
+      "source_dataset_version": "1.0",
+      "source_file_id": 6947348,
+      "source_archive": "Meshes - Darwins finches.zip",
+      "source_archive_bytes": 2516712452,
+      "source_archive_md5": "73945980cb4bcdc4199a6de6e2968d74",
+      "source_archive_md5_verified": false,
+      "source_path": "Meshes/Darwins Finches/Full Skulls Watertight/C.PallidusA.stl",
+      "zip_crc32": "f93a80c7",
+      "extraction": "HTTP byte ranges; central directory size and member CRC32 checked; full archive not downloaded.",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "unique_vertex_count": 1465,
+      "finite_vertices": true,
+      "bounds_mm": [
+        [
+          -22.085681915283203,
+          10.153169631958008
+        ],
+        [
+          -9.735052108764648,
+          8.273297309875488
+        ],
+        [
+          -9.756991386413574,
+          8.563048362731934
+        ]
+      ],
+      "source_dataset_author": "Salem Al Mosleh",
+      "source_dataset_title": "Bird Beaks"
+    },
+    {
+      "path": "prior_remeshing/C.flaveolaA.stl",
+      "bytes": 131184,
+      "sha256": "f78302d3501a628fed42d4b856bb064cae9827344037f7c03d9f97cb14439d32",
+      "sha1": "89a492b0883977ec7eb2d6bfb271d56276f6518e",
+      "md5": "e5b5fd2b6d9cbf901f955a4c1955f8c8",
+      "git_blob_sha1": "fd129d8016aefed36d1b084e9156c73fb4e4ad9b",
+      "bytes_unchanged_from_source": true,
+      "triangle_count": 2622,
+      "source_url": "https://doi.org/10.7910/DVN/UQQ6EZ",
+      "download_url": "https://dataverse.harvard.edu/api/access/datafile/6947348",
+      "source_dataset_version": "1.0",
+      "source_file_id": 6947348,
+      "source_archive": "Meshes - Darwins finches.zip",
+      "source_archive_bytes": 2516712452,
+      "source_archive_md5": "73945980cb4bcdc4199a6de6e2968d74",
+      "source_archive_md5_verified": false,
+      "source_path": "Meshes/DF Relatives/Full Skulls Watertight/C.flaveolaA.stl",
+      "zip_crc32": "1a3402da",
+      "extraction": "HTTP byte ranges; central directory size and member CRC32 checked; full archive not downloaded.",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "unique_vertex_count": 1313,
+      "finite_vertices": true,
+      "bounds_mm": [
+        [
+          -19.48737335205078,
+          7.736988544464111
+        ],
+        [
+          -6.010188102722168,
+          5.969338417053223
+        ],
+        [
+          -5.23110294342041,
+          5.652112007141113
+        ]
+      ],
+      "source_dataset_author": "Salem Al Mosleh",
+      "source_dataset_title": "Bird Beaks"
+    }
+  ]
+}

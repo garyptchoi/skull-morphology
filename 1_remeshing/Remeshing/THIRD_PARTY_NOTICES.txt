@@ -1,0 +1,1980 @@
+Original comment notices from the supplied MATLAB archive.
+These retain author credits, source references and license statements.
+See THIRD_PARTY.md and the accompanying license files for reuse terms.
+
+
+FILE: remesh_batch.m
+% REMESH_BATCH  Batch version of demo_voxelization_and_remeshing.m -- the finch remeshing, step for step:
+%
+%   [..,fvox,..,vvox] = voxelelize_genus(v,f,para,1,1)     voxelize, dilate, fill, largest component, alpha shape,
+%                                                          genus-0 fixing attempt (topology_axis_fixtop/topologyfix_medial)
+%   vvox_sm = laplacian_smooth(vvox,fvox,'cotan',[],0.05,'implicit',vvox,15)
+%   v = vvox_sm;  f = fliplr(fvox)
+%   if Euler ~= 2:  same diagnostics as the demo (warnings only), then meshcheckrepair(v,f,'meshfix')   ['MeshFix', true]
+%   optional:       ICP + rescaling to the original scan, as in the demo's second section              ['Rescale', false]
+%   stlWrite(out_dir/<name>_p<para>.stl)
+%
+%   remesh_batch(in_dir, out_dir)                   para = 60 for every file
+%   remesh_batch(in_dir, out_dir, 'params.csv')     per-file para from CSV: filename,para[,reason]; unlisted = 60
+%   remesh_batch(..., 'MeshFix', false)             skip the meshfix repair
+%   remesh_batch(..., 'Rescale', true, 'RescaleMode', 'uniform'|'nonuniform')
+%   remesh_batch(..., 'Overwrite', true)            redo files whose output already exists
+%   remesh_batch(..., 'Seed', 0)                    RNG state reset to this before EVERY file (see below)
+%   remesh_batch(..., 'Threads', 1)                 fix maxNumCompThreads, for bit-identical results across machines
+%
+% Reproducibility: topologyfix_medial.m calls randperm/rand with no seed, so a skull that needs the medial
+%   topology fix depends on the RNG state, which advances from file to file within one MATLAB session.  'Seed'
+%   resets the state before each file, so the result no longer depends on processing order, on how many files
+%   are in the batch, or on whether MATLAB was started by the matlab.engine (one long session) or by
+%   matlab -batch (a fresh session each call).  Same input + same para + same options -> same STL, byte for byte.
+%
+% Log: out_dir/remeshing_log.csv with filename, output, para, seed, reason, n_vertices, n_faces, euler, genus,
+%      change_gen, meshfix_applied, note, seconds, status.  out_dir/remeshing_settings.txt records the options and
+%      the MATLAB version of each run, so two runs can be checked for having used the same settings.
+%      Run from the Remeshing folder (or addpath(genpath('<Remeshing>/code'))).
+% a log written by the pre-Seed version has one column fewer; keep it, start a new one
+% <- topologyfix_medial uses randperm/rand; reset per file, not per session
+% --- voxelization + genus fixing attempt (verbatim call from the demo) ---
+% --- Laplacian smoothing (verbatim) ---
+% --- Euler check and repair, as in the demo but without stopping on genus >= 1 ---
+% --- optional ICP + rescaling to the original scan (demo's second section) ---
+% core of the original: drop vertices connected only through extremely long edges
+
+
+FILE: code/meshboundaries.m
+%  MESHBOUNDARIES Mesh Boundaries
+%     [bds, n] = MESHBOUNDARIES(f) extracts boundaries of mesh into cells
+%% this version is a little bit faster
+% g = sparse(f, f(:, [2, 3, 1]), 1);
+% [ii, jj, ~] = find(g+g' == 1);
+% h = digraph(ii, jj);
+% bds = {};
+% visited = true(max(f(:)), 1);
+% visited(ii) = false;
+% n = 0;
+% while 1
+%   kk = find(~visited);
+%   if isempty(kk)
+%     break
+%   end
+%   n = n+1;
+%   bds{n} = dfsearch(h, kk(1));
+%   visited(bds{n}) = true;
+% end
+%% this version is older but works
+%% 
+
+
+FILE: code/icp_matlabcentral.m
+% Perform the Iterative Closest Point algorithm on three dimensional point
+% clouds.
+%
+% [TR, TT] = icp(q,p)   returns the rotation matrix TR and translation
+% vector TT that minimizes the distances from (TR * p + TT) to q.
+% p is a 3xm matrix and q is a 3xn matrix.
+%
+% [TR, TT] = icp(q,p,k)   forces the algorithm to make k iterations
+% exactly. The default is 10 iterations.
+%
+% [TR, TT, ER] = icp(q,p,k)   also returns the RMS of errors for k
+% iterations in a (k+1)x1 vector. ER(0) is the initial error.
+%
+% [TR, TT, ER, t] = icp(q,p,k)   also returns the calculation times per
+% iteration in a (k+1)x1 vector. t(0) is the time consumed for preprocessing.
+%
+% Additional settings may be provided in a parameter list:
+%
+% Boundary
+%       {[]} | 1x? vector
+%       If EdgeRejection is set, a vector can be provided that indexes into
+%       q and specifies which points of q are on the boundary.
+%
+% EdgeRejection
+%       {false} | true
+%       If EdgeRejection is true, point matches to edge vertices of q are
+%       ignored. Requires that boundary points of q are specified using
+%       Boundary or that a triangulation matrix for q is provided.
+%
+% Extrapolation
+%       {false} | true
+%       If Extrapolation is true, the iteration direction will be evaluated
+%       and extrapolated if possible using the method outlined by 
+%       Besl and McKay 1992.
+%
+% Matching
+%       {bruteForce} | Delaunay | kDtree
+%       Specifies how point matching should be done. 
+%       bruteForce is usually the slowest and kDtree is the fastest.
+%       Note that the kDtree option is depends on the Statistics Toolbox
+%       v. 7.3 or higher.
+%
+% Minimize
+%       {point} | plane | lmaPoint
+%       Defines whether point to point or point to plane minimization
+%       should be performed. point is based on the SVD approach and is
+%       usually the fastest. plane will often yield higher accuracy. It 
+%       uses linearized angles and requires surface normals for all points 
+%       in q. Calculation of surface normals requires substantial pre
+%       proccessing.
+%       The option lmaPoint does point to point minimization using the non
+%       linear least squares Levenberg Marquardt algorithm. Results are
+%       generally the same as in points, but computation time may differ.
+%
+% Normals
+%       {[]} | n x 3 matrix
+%       A matrix of normals for the n points in q might be provided.
+%       Normals of q are used for point to plane minimization.
+%       Else normals will be found through a PCA of the 4 nearest
+%       neighbors.
+%
+% ReturnAll
+%       {false} | true
+%       Determines whether R and T should be returned for all iterations
+%       or only for the last one. If this option is set to true, R will be
+%       a 3x3x(k+1) matrix and T will be a 3x1x(k+1) matrix.
+%
+% Triangulation
+%       {[]} | ? x 3 matrix
+%       A triangulation matrix for the points in q can be provided,
+%       enabling EdgeRejection. The elements should index into q, defining
+%       point triples that act together as triangles.
+%
+% Verbose
+%       {false} | true
+%       Enables extrapolation output in the Command Window.
+%
+% Weight
+%       {@(match)ones(1,m)} | Function handle
+%       For point or plane minimization, a function handle to a weighting 
+%       function can be provided. The weighting function will be called 
+%       with one argument, a 1xm vector that specifies point pairs by 
+%       indexing into q. The weighting function should return a 1xm vector 
+%       of weights for every point pair.
+%
+% WorstRejection
+%       {0} | scalar in ]0; 1[
+%       Reject a given percentage of the worst point pairs, based on their
+%       Euclidean distance.
+%
+% Martin Kjer and Jakob Wilm, Technical University of Denmark, 2012
+% Use the inputParser class to validate input arguments.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Actual implementation
+% Allocate vector for RMS of errors in every iteration.
+% Start timer
+% Transformed data point cloud
+% Allocate vector for RMS of errors in every iteration.
+% Initialize temporary transform vector and matrix.
+% Initialize total transform vector(s) and rotation matric(es).
+% If Minimize == 'plane', normals are needed
+% If Matching == 'Delaunay', a triangulation is needed
+% If Matching == 'kDtree', a kD tree should be built (req. Stat. TB >= 7.3)
+% If edge vertices should be rejected, find edge vertices
+% Initialize total transform vector (quaternion ; translation vec.)
+% Allocate vector for direction change and change angle.
+% Go into main iteration loop
+% Do matching
+% If matches to edge vertices should be rejected
+% If worst matches should be rejected
+% Determine weight vector
+% Add to the total transformation
+% Apply last transformation
+% Root mean of objective function 
+% If Extrapolation, we might be able to move quicker
+% Reapply total transformation
+% Recalculate root mean of objective function
+% Note this is costly and only for fun!
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% normalize weights
+% find data centroid and deviations from centroid
+% Apply weights
+% find data centroid and deviations from centroid
+% Apply weights
+%p_mark = p_mark .* repmat(weights, 3, 1);
+% taking points of q in matched order
+% singular value decomposition
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Extrapolation in quaternion space. Details are found in:
+%
+% Besl, P., & McKay, N. (1992). A method for registration of 3-D shapes. 
+% IEEE Transactions on pattern analysis and machine intelligence, 239?256.
+% linear fit
+% parabolic fit
+% linear zero crossing
+% polynomial top point
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Determine the RMS error between two point equally sized point clouds with
+% point correspondance.
+% ER = rms_error(p1,p2) where p1 and p2 are 3xn matrices.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Converts (orthogonal) rotation matrices R to (unit) quaternion
+% representations
+% 
+% Input: A 3x3xn matrix of rotation matrices
+% Output: A 4xn matrix of n corresponding quaternions
+%
+% http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Converts (unit) quaternion representations to (orthogonal) rotation matrices R
+% 
+% Input: A 4xn matrix of n quaternions
+% Output: A 3x3xn matrix of corresponding rotation matrices
+%
+% http://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#From_a_quaternion_to_an_orthogonal_matrix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Least squares normal estimation from point clouds using PCA
+%
+% H. Hoppe, T. DeRose, T. Duchamp, J. McDonald, and W. Stuetzle. 
+% Surface reconstruction from unorganized points. 
+% In Proceedings of ACM Siggraph, pages 71:78, 1992.
+%
+% p should be a matrix containing the horizontally concatenated column
+% vectors with points. k is a scalar indicating how many neighbors the
+% normal estimation is based upon.
+%
+% Note that for large point sets, the function performs significantly
+% faster if Statistics Toolbox >= v. 7.3 is installed.
+%
+% Jakob Wilm 2010
+%spd matrix P
+%P = 2*cov(x);
+% choses the smallest eigenvalue
+% returns the corresponding eigenvector    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Program to find the k - nearest neighbors (kNN) within a set of points. 
+% Distance metric used: Euclidean distance
+%
+% Note that this function makes repetitive use of min(), which seems to be
+% more efficient than sort() for k < 30.
+%dimensionality of points
+% this is to avoid slow repmat()
+% remove found number from d
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Boundary point determination. Given a set of 3D points and a
+% corresponding triangle representation, returns those point indices that
+% define the border/edge of the surface.
+%Correcting polygon indices and converting datatype 
+%Calculating freeboundary points:
+%Output
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+FILE: code/mesh/adjacency_matrix.m
+% ADJACENCY_MATRIX Build sparse adjacency matrix from edge list or face list
+% 
+% [A] = adjacency_matrix(E)
+% [A] = adjacency_matrix(F)
+% [A] = adjacency_matrix(T)
+%
+% Inputs:
+%   E  #E by 2 edges list
+%   or 
+%   F  #F by 3 triangle list
+%   or 
+%   T  #F by 4 tet list
+% Outputs:
+%   A  #V by #V adjacency matrix (#V = max(E(:)))
+%    
+% See also: facet_adjacency_matrix
+%
+
+
+FILE: code/mesh/avgedge.m
+% AVGEDGE Compute the average of every edge in the mesh
+% 
+% [ b ] = avgedge(V,F)
+%
+% Inputs:
+%  V  #V x 3 matrix of vertex coordinates
+%  F  #F x #simplex size  list of simplex indices
+% Outputs:
+%  b average edge length
+%
+% Note: boundary edges are weighted half as much as internal edges
+%
+% Copyright 2011, Alec Jacobson (jacobson@inf.ethz.ch), and Daniele Panozzo
+%
+% works on anything edges.m can handle
+
+
+FILE: code/mesh/cotmatrix_embedded.m
+% COTMATRIX_EMBEDDED computes cotangent matrix (laplacian mesh operator),
+% (mass/area terms already cancelled out) where (V,F) are a mesh embedded in
+% size(V,2) dimensional space. This is a generalization of cotmatrix and a
+% wrapper for cotmatrix_intrinsic
+%
+% L = cotmatrix_embedded(V,F)
+%
+% Inputs:
+%   V  #V x dim matrix of vertex coordinates
+%   F  #F x 3  matrix of indices of triangle corners
+% Outputs:
+%   L  sparse #V x #V matrix of cot weights 
+%
+% Example:
+%   % (V,F) is a surface mesh in R^3
+%   L = cotmatrix(V,F);
+%   Le = cotmatrix_embedded(V,F);
+%   % results should be the same up to floating point error
+%   max(max(abs(L-Le)))
+%
+% See also: cotmatrix, cotmatrix_intrinsic
+%
+% Copyright 2011, Alec Jacobson (jacobson@inf.ethz.ch), Denis Zorin
+%
+% edge lengths numbered same as opposite vertices
+
+
+FILE: code/mesh/cotmatrix_intrinsic.m
+% COTMATRIX_INTRINSIC Compute cotangent Laplacian using edge lengths (not
+% vertex positions).
+%
+% L = cotmatrix(l,F,nvert)
+%
+% Inputs:
+%   l  #F by 3, array of edge lengths of edges opposite each face in F
+%   F  #F by 3, list of indices of triangle corners
+%   nvert  number of vertices, only needed to set size
+% Outputs:
+%   L  sparse nvert x nvert matrix of cot weights 
+%
+% Example:
+%   % Reproduce regular cotmatrix using cotmatrix_intrinsic
+%   % edges numbered same as opposite vertices
+%   FT = F';
+%   l = [ ...
+%     sqrt(sum((V(FT(:,2),:)-V(FT(:,3),:)).^2,2)) ...
+%     sqrt(sum((V(FT(:,3),:)-V(FT(:,1),:)).^2,2)) ...
+%
+% See also: cotmatrix
+% should change code below, so we don't need this transpose
+% Law of cosines + Law of sine gives you:
+% renaming indices of vertices of triangles for convenience
+% semiperimeters
+% Heron's formula for area
+% cotangents and diagonal entries for element matrices
+% correctly divided by 4 (alec 2010)
+% diag entries computed from the condition that rows of the matrix sum up to 1
+% (follows from  the element matrix formula E_{ij} = (v_i dot v_j)/4/A )
+% indices of nonzero elements in the matrix for sparse() constructor
+% values corresponding to pairs form (i,j)
+% for repeated indices (i,j) sparse automatically sums up elements, as we want
+
+
+FILE: code/mesh/edges.m
+% EDGES Compute the unique undireced edges of a simplicial complex
+% 
+% E = edges(F)
+%
+% Input:
+%  F #F x simplex-size  matrix of indices of simplex corners
+% Output:
+%  E edges in sorted order, direction of each is also sorted
+%
+% Example:
+%   % get unique undirected edges
+%   E = edges(F);
+%   % get unique directed edges
+%   E = [E ; E(:,2) E(:, 1)];
+% 
+% Copyright 2011, Alec Jacobson (jacobson@inf.ethz.ch)
+%
+% all combinations of edges
+%I = [];
+%J = [];
+%for ii = 1:(n-1)
+%  I = [I repmat(ii,1,n-ii)];
+%  J = [J (ii+1):n];
+%end
+%assert(all(size(I) == size(J)));
+%% 
+%EI = F(:,I);
+%EI = EI(:);
+%EJ = F(:,J);
+%EJ = EJ(:);
+%E = unique(sort([EI EJ]')','rows');
+%if(size(F,2) == 3)
+%  E = unique(sort( ...
+%    [F(:,1) F(:,2); ...
+%     F(:,1) F(:,3); ...
+%     F(:,2) F(:,3) ...
+%     ]')','rows');
+%elseif(size(F,2) == 4)
+%  E = unique(sort( ...
+%    [F(:,1) F(:,2); ...
+%     F(:,1) F(:,3); ...
+%     F(:,1) F(:,4); ...
+%     F(:,2) F(:,3); ...
+%     F(:,2) F(:,4); ...
+%     F(:,3) F(:,4) ...
+%     ]')','rows');
+%else 
+%  error('F should either be #F by 3 tri list or #F by 4 tet list');
+%end
+
+
+FILE: code/mesh/laplacian_smooth.m
+% LAPLACIAN_SMOOTH smooth a mesh using implicit/explicit laplacian smoothing
+%
+% [U] = laplacian_smooth(V,F)
+% [U] = laplacian_smooth(V,F,L_method,b,lambda,method,S)
+% [U,Uall] = laplacian_smooth(V,F,L_method,b,lambda,method,S,max_iter)
+% 
+% Inputs:
+%   V  #V x 3 matrix of vertex coordinates
+%   F  #F x 3  matrix of indices of triangle corners
+%   L_method  method for laplacian
+%      'uniform'
+%      'cotan'
+%   b  list of indices of fixed vertices
+%   lambda  diffusion speed parameter {0.1}
+%   method  method to use:
+%     'implicit' (default)
+%     'explicit'
+%   S  scalar fields to smooth (default V)
+% Outputs:
+%   U  #V x 3 list of new vertex positions
+%   Uall  #V x 3 x iters list of new vertex positions for each iteration
+%   
+% number of vertices
+% nuymber of dimensions
+% bulid sparse identity matrix
+% only compute uniform laplacain once
+% planar meshes should use uniform laplacian
+% place for factorization and symmtery flag used by min_quad_with_fixed
+% recompute laplacian
+% other 3D meshes should use cotangent laplacian
+%error
+% could prefactor Q for 'uniform' case
+% enforce boundary
+%[iter max_iter]
+%[max(abs(U(:)-U_prev(:))) tol*h]
+
+
+FILE: code/mesh/min_quad_with_fixed.m
+% MIN_QUAD_WITH_FIXED Minimize quadratic energy Z'*A*Z + Z'*B + C with
+% constraints that Z(known) = Y, optionally also subject to the constraints
+% Aeq*Z = Beq
+% http://www.alecjacobson.com/weblog/?p=1913
+% http://www.alecjacobson.com/weblog/?p=2491
+%
+% [Z,F] = min_quad_with_fixed(A,B,known,Y)
+% [Z,F,Lambda,Lambda_known] = min_quad_with_fixed(A,B,known,Y,Aeq,Beq,F)
+%
+% Inputs:
+%   A  n by n matrix of quadratic coefficients
+%   B  n by 1 column of linear coefficients, if empty then assumed B = 0
+%   known  #known list of indices to known rows in Z
+%   Y  #known by cols list of fixed values corresponding to known rows in Z
+%   Optional:
+%     Aeq  m by n list of linear equality constraint coefficients
+%     Beq  m by 1 list of linear equality constraint constant values, if
+%       empty then assumed Beq = 0
+%     F see output
+% Outputs:
+%   Z  n by cols solution
+%   Optional:
+%     F  struct containing all information necessary to solve a prefactored
+%     system touching only B, Y, and optionally Beq
+%     Lambda  m list of values of lagrange multipliers corresponding to each
+%       row in Aeq
+%     Lambda_known  m list of values of lagrange multipliers corresponding to each
+%       known value
+%
+% Troubleshooting:
+%   'Warning: Matrix is singular to working precision' A number of things can
+%   cause this to happen:
+%     (1) Your system matrix A after removing knowns is not full rank, check
+%     condest of A and rank of A
+%     (2) Some constraints in Aeq are linearly dependent (after removing
+%     known values), check SVD of Aeq
+%   "My hessian should be symmetric, positive definite but I see that lu is
+%     being used". Check (1) and (2) above, and:
+%     (3) be sure you giving A and not accidentally -A, which would be
+%     negative definite.
+%   "My constraints are not satisfied. That is, some abs(Aeq * Z - Beq) are
+%     not zero." In the output, check F.Aeq_li. If this is false then
+%     according to QR decomposition your constraints are linearly dependent.
+%     Check that your constraints are not conflicting.  Redundant or linearly
+%     dependent constraints **equations** (including rhs) should be OK, but
+%     linearly dependent rows in Aeq with mismatching rows in Beq mean
+%     there's a conflict.
+%     
+%
+%
+% Example:
+%   % one-linear to use pcg with same prototype:
+%   min_quad_with_fixed_pcg = @(A,B,known,Y,tol,iter,fun) ...
+%     full(sparse( ...
+%       [setdiff((1:size(A,1))',known(:));known(:)],1, ...
+%       [pcg( ...
+%         A(setdiff(1:end,known),setdiff(1:end,known)), ...
+%         -(A(setdiff(1:end,known),known) * Y) - ...
+%         0.5*B(setdiff(1:end,known)),tol,iter);bc]));
+% Implementation details:
+% minimize x'Ax + x'B
+% subject to Aeq x = Beq
+%
+% This is the same as:
+% find the saddle point of x'Ax + x'B + lambda' * (Aeq * x  - Beq)
+% where lambda is a vector of lagrange multipliers, one for each of the
+% constraints (rows in Aeq)
+%
+% Then we rewrite this, combining x and lambda:
+% [x; lambda]' * [A Aeq';Aeq Z] * [x; lambda] + [x; lambda]' * [B; -2*Beq]
+%
+% Notice the -2 because lamba' * Aeq * x shows up twice in the quadratic part.
+% Then I can differentiate with respect to [x; lambda] and we get:
+% 2*[A Aeq';Aeq Z] * [x; lambda] + [B; -2*Beq]
+% Setting that to zero and moving the knowns to the right hand side we get:
+% [A Aeq';Aeq Z] * [x; lambda] = -0.5 * [B; -2*Beq]
+% treat empty Beq as column of zeros to match Aeq
+%     if ~isempty(F)
+%       warning('Precomputing');
+%     end
+% !!SHOULD REMOVE F AS INPUT PARAM!!
+% PRECOMPUTE perform any necessary precomputation of system including
+% factorization and preparation of right-hand side
+% 
+% F = precompute(A,known,Aeq)
+%
+% Inputs:
+%   A  n by n matrix of quadratic coefficients
+%   known  #known list of indices to known rows in Z
+%   Optional:
+%     Aeq  m by n list of linear equality constraint coefficients
+% Outputs:
+%   F  struct containing all information necessary to solve a prefactored
+%   system touching only B, Y, and optionally Beq
+% number of rows
+% cache problem size
+% cache known
+% get list of unknown variables including lagrange multipliers
+% note that columns are in *original* order
+% determine if A(unknown,unknown) is symmetric and/or postive definite
+%sym_measure = normest(Auu-Auu')./normest(Auu);
+% not very symmetric
+% nearly symmetric but not perfectly
+% Either Auu is empty or sym_measure should be perfect
+% Perfectly symmetric
+% check if there are blank constraints
+% number of linear equality constraints
+%assert(neq <= n,'Number of constraints (%d) > problem size (%d)',neq,n);
+% Determine if positive definite (also compute cholesky decomposition if it
+% is as a side effect)
+% F.S'*Auu*F.S = F.L*F.L'
+% keep track of whether original A was sparse
+% Determine number of linearly independent constraints
+%tic;
+% Null space substitution with QR
+%fprintf('QR: %g secs\n',toc);
+% Use raw Lagrange Multiplier method only if rows of Aeq are Linearly
+% Independent
+% get list of lagrange multiplier indices
+% append lagrange multiplier quadratic terms
+%assert(~issparse(Aeq) || A_sparse == issparse(A));
+% precompute RHS builders
+% LDL has a different solve prototype
+% create factorization
+% we already have F.L
+% LDL is faster than LU for moderate #constraints < #unknowns
+% LU factorization of NA
+% We alread have CTQ,CTR,CTE
+%tic;
+% Aeq' * AeqTE = AeqTQ * AeqTR
+% AeqTE' * Aeq = AeqTR' * AeqTQ'
+% Aeq x = Beq
+% Aeq (Q2 lambda + lambda_0) = Beq
+% we know Aeq Q2 = 0 --> Aeq Q2 lambda = 0
+% Aeq lambda_0 = Beq
+% AeqTE' * Aeq lambda_0 = AeqTE' * Beq
+% AeqTR' * AeqTQ' lambda_0 = AeqTE' * Beq
+% AeqTQ' lambda_0 = AeqTR' \ (AeqTE' * Beq)
+% lambda_0 = AeqTQ * (AeqTR' \ (AeqTE' * Beq))
+% lambda_0 = Aeq \ Beq;
+% lambda_0 = AeqTQ * (AeqTR' \ (AeqTE' * Beq));
+%lambda_0 = [AeqTQ1 * (AeqTR1' \ (AeqTE' * Beq))];
+%fprintf('lambda_0: %g secs\n',toc);
+%tic;
+% Substitute x = Q2 lambda + lambda_0
+% min 0.5 x' A x - x' b
+%   results in A x = b
+% min 0.5 (Q2 lambda + lambda_0)' A (Q2 lambda + lambda_0) - (Q2 lambda + lambda_0)' b
+% min 0.5 lambda' Q2' A Q2 lambda + lambda Q2' A lambda_0 - lambda Q2' b 
+%  results in Q2' A Q2 lambda = - Q2' A lambda_0 + Q2' b
+%QRb = -AeqTQ2' * Auu * lambda_0 + AeqTQ2' * b;
+% precompute RHS builders
+%fprintf('Proj: %g secs\n',toc);
+%tic;
+% QRA seems to be PSD
+%fprintf('Chol: %g secs\n',toc);
+% Perhaps if Auu is not PD then we need to use LDL...
+% WHICH OF THESE ARE REALLY NECESSARY?
+% SOLVE  perform solve using precomputation and parameters for building
+% right-hand side that are allowed to change without changing precomputation
+%
+% Z = solve(F,B,Y,Beq)
+%
+% Inputs:
+%   F  struct containing all information necessary to solve a prefactored
+%     system touching only B, Y, and optionally Beq
+%   B  n by 1 column of linear coefficients
+%   Y  #known by cols list of fixed values corresponding to known rows in Z
+%   Optional:
+%     Beq  m by 1 list of linear equality constraint constant values
+% Outputs:
+%   Z  n by cols solution
+%   Lambda  m by cols list of lagrange multiplier *values*
+%   Lambda_known  #known by cols list of lagrange multiplier *values* for
+%     known variables
+%
+% number of known rows
+% force Y to have 1 column even if empty
+% use linear coefficients to determine cols
+% Build system's rhs
+% number of lagrange multipliers aka linear equality constraints
+% prepare solution
+% fix any removed constraints (set Lambda to 0)
+% save lagrange multipliers
+% throw away lagrange multipliers
+% Adjust Aeq rhs to include known parts
+% Where did this -0.5 come from? Probably the same place as above.
+% can't solve rectangular system: trim (expects that constraints are not
+% contradictory)
+% prepare solution
+% http://www.math.uh.edu/~rohop/fall_06/Chapter3.pdf
+%Lambda = (F.AeqTQ1' * Aequ') \ (F.AeqTQ1' * NB - F.AeqTQ1' * F.Auu * Z(F.unknown));
+% Can't solve rectangular system
+%Lambda = F.AeqTE * (F.AeqTR1 \ (F.AeqTQ1' * NB - F.AeqTQ1' * F.Auu * Z(F.unknown)));
+% TRIM: (other linearly dependent constraints get 0s?)
+
+
+FILE: code/mesh/normrow.m
+% NORMROW  Compute l2 row vector norms
+%
+% B = normrow( A )
+%
+% Input:
+%  A  #A by D list of row vectors of dimension D
+% Output:
+%  B  #A list of norms of row vectors in A
+%
+% Copyright 2011, Alec Jacobson (jacobson@inf.ethz.ch), Daniele Panozzo
+%
+
+
+FILE: code/iso2mesh/deletemeshfile.m
+%
+% flag=deletemeshfile(fname)
+%
+% delete a given work mesh file under the working directory
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% input: 
+%     fname: specified file name (without path)
+%
+% output:
+%     flag: not used
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+
+
+FILE: code/iso2mesh/fallbackexeext.m
+%
+% exesuff=fallbackexeext(exesuffix, exename)
+%
+% get the fallback external tool extension names for the current platform
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% input:
+%     exesuffix: the output executable suffix from getexeext
+%     exename: the executable name
+%
+% output:
+%     exesuff: file extension for iso2mesh tool binaries
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+% fall back to i386 linux
+% fall back to i386 mac
+% fall back to ppc mac
+% fall back to OS native package
+
+
+FILE: code/iso2mesh/getexeext.m
+%
+% exesuff=getexeext()
+%
+% get meshing external tool extension names for the current platform
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% output:
+%     exesuff: file extension for iso2mesh tool binaries
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+
+
+FILE: code/iso2mesh/getvarfrom.m
+%
+% p=getvarfrom(ws,name)
+%
+% get variable value by name from specified work-space
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% input:
+%    ws: name of the work-space, for example, 'base'
+%    name: name string of the variable
+%
+% output:
+%    p: the value of the specified variable, if the variable does not
+%       exist, return empty array
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+
+
+FILE: code/iso2mesh/isoctavemesh.m
+%
+% [isoctave verinfo]=isoctavemesh
+%
+% determine whether the code is running in octave
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% output:
+%   isoctave: 1 if in octave, otherwise 0
+%   verinfo: a string, showing the version of octave (OCTAVE_VERSION)
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+
+
+FILE: code/iso2mesh/jsonopt.m
+%
+% val=jsonopt(key,default,optstruct)
+%
+% setting options based on a struct. The struct can be produced
+% by varargin2struct from a list of 'param','value' pairs
+%
+% authors:Qianqian Fang (q.fang <at> neu.edu)
+%
+% $Id: loadjson.m 371 2012-06-20 12:43:06Z fangq $
+%
+% input:
+%      key: a string with which one look up a value from a struct
+%      default: if the key does not exist, return default
+%      optstruct: a struct where each sub-field is a key 
+%
+% output:
+%      val: if key exists, val=optstruct.key; otherwise val=default
+%
+% license:
+%     BSD or GPL version 3, see LICENSE_{BSD,GPLv3}.txt files for details
+%
+% -- this function is part of jsonlab toolbox (http://iso2mesh.sf.net/cgi-bin/index.cgi?jsonlab)
+% 
+
+
+FILE: code/iso2mesh/mcpath.m
+%
+% binname=mcpath(fname)
+%
+% get full executable path by prepending a command directory path
+% parameters:
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% input:
+%    fname: input, a file name string
+%
+% output:
+%    binname: output, full file name located in the bin directory
+%
+%    if global variable ISO2MESH_BIN is set in 'base', it will
+%    use [ISO2MESH_BIN filesep cmdname] as the command full path,
+%    otherwise, let matlab pass the cmdname to the shell, which
+%    will search command in the directories listed in system
+%    $PATH variable.
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+% the bin folder under iso2mesh is searched first
+% use binary without suffix on system PATH
+
+
+FILE: code/iso2mesh/meshcheckrepair.m
+%
+% [node,elem]=meshcheckrepair(node,elem,opt)
+% 
+% check and repair a surface mesh
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+% date: 2008/10/10
+%
+% input/output:
+%      node: input/output, surface node list, dimension (nn,3)
+%      elem: input/output, surface face element list, dimension (be,3)
+%      opt: options, including
+%            'dupnode': remove duplicated nodes
+%            'dupelem' or 'duplicated': remove duplicated elements
+%            'dup': both above
+%            'isolated': remove isolated nodes
+%            'open': abort when open surface is found
+%            'deep': call external jmeshlib to remove non-manifold vertices
+%            'meshfix': repair a closed surface by the meshfix utility (new)
+%                       it can remove self-intersecting elements and fill holes
+%            'intersect': test a surface for self-intersecting elements
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+%[node,elem]=readoff(mwpath('pre_sclean_inter.off'));
+
+
+FILE: code/iso2mesh/mwpath.m
+%
+% tempname=meshtemppath(fname)
+%
+% get full temp-file name by prepend working-directory and current session name
+%
+% author: Qianqian Fang (fangq <at> nmr.mgh.harvard.edu)
+%
+% input:
+%    fname: input, a file name string
+%
+% output:
+%    tempname: output, full file name located in the working directory
+%
+%    if global variable ISO2MESH_TEMP is set in 'base', it will use it
+%    as the working directory; otherwise, will use matlab function tempdir
+%    to return a working directory.
+%
+%    if global variable ISO2MESH_SESSION is set in 'base', it will be
+%    prepended for each file name, otherwise, use supplied file name.
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+% for Linux/Unix/Mac OS
+% for windows
+
+
+FILE: code/iso2mesh/readoff.m
+%
+% [node,elem]=readoff(fname)
+%
+% read Geomview Object File Format (OFF)
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+% date: 2008/03/28
+%
+% input:
+%    fname: name of the OFF data file
+%
+% output:
+%    node: node coordinates of the mesh
+%    elem: list of elements of the mesh	    
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+FILE: code/iso2mesh/removedupelem.m
+%
+% elem=removedupelem(elem)
+%
+% remove doubly duplicated (folded) elements
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% input:
+%    elem: list of elements (node indices)
+%
+% output:
+%    elem: element list after removing the duplicated elements
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+
+
+FILE: code/iso2mesh/removedupnodes.m
+%
+% [newnode,newelem]=removedupnodes(node,elem)
+%
+% removing the duplicated nodes from a mesh
+%
+% author: Qianqian Fang <fangq at nmr.mgh.harvard.edu>
+%
+% input:
+%   elem: integer array with dimensions of NE x 4, each row contains
+%         the indices of all the nodes for each tetrahedron
+%   node: node coordinates, 3 columns for x, y and z respectively
+%
+% output:
+%   newnode: nodes without duplicates
+%   newelem: elements with only the unique nodes
+%
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+
+
+FILE: code/iso2mesh/removeisolatednode.m
+%
+% [no,el]=removeisolatednode(node,elem)
+%
+% remove isolated nodes: nodes that are not included in any element
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+%
+% input:
+%     node: list of node coordinates
+%     elem: list of elements of the mesh, can be a regular array or a cell array for PLCs
+%
+% output:
+%     no: node coordinates after removing the isolated nodes
+%     el: element list of the resulting mesh
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+% old node index
+% indices to the isolated nodes
+% indices to the isolated nodes
+% calculate the new node index after removing the isolated nodes
+% map to new index
+% element list in the new index
+% remove the isolated nodes
+
+
+FILE: code/iso2mesh/saveoff.m
+%
+% saveoff(v,f,fname)
+%
+% save a surface mesh to Geomview Object File Format (OFF)
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+% date: 2007/03/28
+%
+% input:
+%      v: input, surface node list, dimension (nn,3)
+%      f: input, surface face element list, dimension (be,3)
+%      fname: output file name
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+
+
+FILE: code/iso2mesh/surfedge.m
+%
+% [openedge,elemid]=surfedge(f)
+%
+% find the edge of an open surface or surface of a volume
+%
+% author: Qianqian Fang, <q.fang at neu.edu>
+% date: 2007/11/21
+%
+% input:
+%      f: input, surface face element list, dimension (be,3)
+%
+% output:
+%      openedge: list of edges of the specified surface
+%      elemid (optional): the corresponding index of the 
+%                tetrahedron of an open-edge or triangle, 
+%                elemid has the same length as openedge.
+%
+% -- this function is part of iso2mesh toolbox (http://iso2mesh.sf.net)
+%
+% create all the edges
+% create all the edges
+% node4=[f(:,3);f(:,2);f(:,1)];   % node idx concatinated
+% node4=node4(ix(qx));
+
+
+FILE: code/iso2mesh/varargin2struct.m
+%
+% opt=varargin2struct('param1',value1,'param2',value2,...)
+%   or
+% opt=varargin2struct(...,optstruct,...)
+%
+% convert a series of input parameters into a structure
+%
+% authors:Qianqian Fang (q.fang <at> neu.edu)
+% date: 2012/12/22
+%
+% input:
+%      'param', value: the input parameters should be pairs of a string and a value
+%       optstruct: if a parameter is a struct, the fields will be merged to the output struct
+%
+% output:
+%      opt: a struct where opt.param1=value1, opt.param2=value2 ...
+%
+% license:
+%     BSD or GPL version 3, see LICENSE_{BSD,GPLv3}.txt files for details 
+%
+% -- this function is part of jsonlab toolbox (http://iso2mesh.sf.net/cgi-bin/index.cgi?jsonlab)
+%
+
+
+FILE: code/natsortfiles/natsort.m
+%#ok<*SPERR>
+% Alphanumeric / Natural-Order sort the strings in a cell array of strings.
+%
+% (c) 2017 Stephen Cobeldick
+%
+% Alphanumeric sort of a cell array of strings: sorts by character order
+% and also by the values of any numbers that are within the strings. The
+% default is case-insensitive ascending with integer number substrings:
+% optional inputs control the sort direction, case sensitivity, and the
+% number substring matching (see the section "Number Substrings" below).
+%
+%%% Syntax:
+%  Y = natsort(X)
+%  Y = natsort(X,xpr)
+%  Y = natsort(X,xpr,<options>)
+% [Y,ndx] = natsort(X,...);
+%
+% To sort filenames or filepaths use NATSORTFILES (File Exchange 47434).
+% To sort the rows of a cell array of strings use NATSORTROWS (File Exchange 47433).
+%
+% See also NATSORTFILES NATSORTROWS SORTROWS SORT CELLSTR REGEXP SSCANF NUM2ORDINAL NUM2WORDS NUM2BIP NUM2SIP INTMAX
+%
+%% Number Substrings %%
+%
+% By default consecutive digit characters are interpreted as an integer.
+% The optional regular expression pattern <xpr> permits the numbers to also
+% include a +/- sign, a decimal point, exponent E-notation or any literal
+% characters, quantifiers or look-around requirements. For more information:
+% http://www.mathworks.com/help/matlab/matlab_prog/regular-expressions.html
+%
+% The substrings are then parsed by SSCANF into numeric variables, using
+% either the *default format '%f', or the user-supplied format specifier.
+%
+% This table shows some example regular expression patterns for some common
+% notations and ways of writing numbers (see section "Examples" for more):
+%
+% <xpr> Regular | Number Substring | Number Substring              | SSCANF
+% Expression:   | Match Examples:  | Match Description:            | Format Specifier:
+% ==============|==================|===============================|==================
+% *         \d+ | 0, 1, 234, 56789 | unsigned integer              | %f  %u  %lu  %i
+% --------------|------------------|-------------------------------|------------------
+%     (-|+)?\d+ | -1, 23, +45, 678 | integer with optional +/- sign| %f  %d  %ld  %i
+% --------------|------------------|-------------------------------|------------------
+%   \d+(\.\d+)? | 012, 3.45, 678.9 | integer or decimal            | %f
+% --------------|------------------|-------------------------------|------------------
+%   \d+|Inf|NaN | 123, 4, Inf, NaN | integer, infinite or NaN value| %f
+% --------------|------------------|-------------------------------|------------------
+%  \d+\.\d+e\d+ | 0.123e4, 5.67e08 | exponential notation          | %f
+% --------------|------------------|-------------------------------|------------------
+%  0[0-7]+      | 012, 03456, 0700 | octal prefix & notation       | %o  %i
+% --------------|------------------|-------------------------------|------------------
+%  0X[0-9A-F]+  | 0X0, 0XFF, 0X7C4 | hexadecimal prefix & notation | %x  %i
+% --------------|------------------|-------------------------------|------------------
+%  0B[01]+      | 0B101, 0B0010111 | binary prefix & notation      | %b
+% --------------|------------------|-------------------------------|------------------
+%
+% The SSCANF format specifier (including %b) can include literal characters
+% and skipped fields. The octal, hexadecimal and binary prefixes are optional.
+% For more information: http://www.mathworks.com/help/matlab/ref/sscanf.html
+%
+%% Relative Sort Order %%
+%
+% The sort order of the number substrings relative to the characters
+% can be controlled by providing one of the following string options:
+%
+% Option Token:| Relative Sort Order:                 | Example:
+% =============|======================================|====================
+% 'beforechar' | numbers < char(0:end)                | '1' < '.' < 'A'
+% -------------|--------------------------------------|--------------------
+% 'afterchar'  | char(0:end) < numbers                | '.' < 'A' < '1'
+% -------------|--------------------------------------|--------------------
+% 'asdigit'   *| char(0:47) < numbers < char(48:end)  | '.' < '1' < 'A'
+% -------------|--------------------------------------|--------------------
+%
+% Note that the digit characters have character values 48 to 57, inclusive.
+%
+%% Examples %%
+%
+%%% Integer number substrings:
+% A = {'a2', 'a10', 'a1'};
+% sort(A)
+%  ans =  'a1'  'a10'  'a2'
+% natsort(A)
+%  ans =  'a1'  'a2'  'a10'
+%
+%%% Multiple number substrings (e.g. release version numbers):
+% B = {'v10.6', 'v9.10', 'v9.5', 'v10.10', 'v9.10.20', 'v9.10.8'};
+% sort(B)
+%  ans =  'v10.10'  'v10.6'  'v9.10'  'v9.10.20'  'v9.10.8'  'v9.5'
+% natsort(B)
+%  ans =  'v9.5'  'v9.10'  'v9.10.8'  'v9.10.20'  'v10.6'  'v10.10'
+%
+%%% Integer, decimal or Inf number substrings, possibly with +/- signs:
+% C = {'test+Inf', 'test11.5', 'test-1.4', 'test', 'test-Inf', 'test+0.3'};
+% sort(C)
+%  ans =  'test'  'test+0.3'  'test+Inf'  'test-1.4'  'test-Inf'  'test11.5'
+% natsort(C, '(-|+)?(Inf|\d+(\.\d+)?)')
+%  ans =  'test'  'test-Inf'  'test-1.4'  'test+0.3'  'test11.5'  'test+Inf'
+%
+%%% Integer or decimal number substrings, possibly with an exponent:
+% D = {'0.56e007', '', '4.3E-2', '10000', '9.8'};
+% sort(D)
+%  ans =  ''  '0.56e007'  '10000'  '4.3E-2'  '9.8'
+% natsort(D, '\d+(\.\d+)?(E(+|-)?\d+)?')
+%  ans =  ''  '4.3E-2'  '9.8'  '10000'  '0.56e007'
+%
+%%% Hexadecimal number substrings (possibly with '0X' prefix):
+% E = {'a0X7C4z', 'a0X5z', 'a0X18z', 'aFz'};
+% sort(E)
+%  ans =  'a0X18z'  'a0X5z'  'a0X7C4z'  'aFz'
+% natsort(E, '(?<=a)(0X)?[0-9A-F]+', '%x')
+%  ans =  'a0X5z'  'aFz'  'a0X18z'  'a0X7C4z'
+%
+%%% Binary number substrings (possibly with '0B' prefix):
+% F = {'a11111000100z', 'a0B101z', 'a0B000000000011000z', 'a1111z'};
+% sort(F)
+%  ans =  'a0B000000000011000z'  'a0B101z'  'a11111000100z'  'a1111z'
+% natsort(F, '(0B)?[01]+', '%b')
+%  ans =  'a0B101z'  'a1111z'  'a0B000000000011000z'  'a11111000100z'
+%
+%%% uint64 number substrings (with full precision!):
+% natsort({'a18446744073709551615z', 'a18446744073709551614z'}, [], '%lu')
+%  ans =   'a18446744073709551614z'  'a18446744073709551615z'
+%
+%%% Case sensitivity:
+% G = {'a2', 'A20', 'A1', 'a10', 'A2', 'a1'};
+% natsort(G, [], 'ignorecase') % default
+%  ans =   'A1'  'a1'  'a2'  'A2'  'a10'  'A20'
+% natsort(G, [], 'matchcase')
+%  ans =   'A1'  'A2'  'A20'  'a1'  'a2'  'a10'
+%
+%%% Sort direction:
+% H = {'2', 'a', '3', 'B', '1'};
+% natsort(H, [], 'ascend') % default
+%  ans =   '1'  '2'  '3'  'a'  'B'
+% natsort(H, [], 'descend')
+%  ans =   'B'  'a'  '3'  '2'  '1'
+%
+%%% Relative sort-order of number substrings compared to characters:
+% X = num2cell(char(32+randperm(63)));
+% cell2mat(natsort(X, [], 'asdigit')) % default
+%  ans = '!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_'
+% cell2mat(natsort(X, [], 'beforechar'))
+%  ans = '0123456789!"#$%&'()*+,-./:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_'
+% cell2mat(natsort(X, [], 'afterchar'))
+%  ans = '!"#$%&'()*+,-./:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_0123456789'
+%
+%% Input and Output Arguments %%
+%
+%%% Inputs (*=default):
+%   X   = Cell of Strings, with strings to be sorted into natural-order.
+%   xpr = String Token, regular expression to detect number substrings, *'\d+'.
+% <options> string tokens can be entered in any order, as many as required:
+%   - Case sensitive/insensitive matching: 'matchcase'/'ignorecase'*.
+%   - Sort direction: 'descend'/'ascend'*.
+%   - Relative sort of numbers: 'beforechar'/'afterchar'/'asdigit'*.
+%   - The SSCANF number conversion format, e.g.: *'%f', '%x', '%i', etc.
+%
+%%% Outputs:
+%   Y   = Cell of Strings, <X> with all strings sorted into natural-order.
+%   ndx = Numeric Array, such that Y = X(ndx). The same size as <X>.
+%   dbg = Cell Array of all parsed characters and number values. Each row is
+%         one string, linear-indexed from <X>. Helps to debug string parsing.
+%
+% [X,ndx,dbg] = natsort(X,*xpr,<options>)
+%% Input Wrangling %%
+%
+%
+% Regular expression:
+%
+% Optional arguments:
+% Character case matching:
+% Sort direction:
+% Relative sort-order of numbers compared to characters:
+% SSCANF conversion format:
+%
+%
+%
+%
+%% Split Strings %%
+%
+% Split strings into number and remaining substrings:
+%
+% Determine lengths:
+%
+%
+% Determine indices of numbers and characters:
+% Transfer characters into char array:
+%
+%% Convert Number Substrings %%
+%
+% One format specifier
+% match an odd number of % characters.
+% binary
+% Remove '0B' if not specified in the format string:
+% 64-bit
+%slow!
+% double
+% fast!
+% No format specifier -> double
+% Note: NuA's class is determined by SSCANF.
+%
+%% Debugging Array %%
+%
+%
+%% Sort %%
+%
+% ignorecase
+%
+% From the last column to the first...
+% ...sort the characters and number values:
+% ...keep only relevant indices:
+% character
+% number
+% empty
+% ...define the sort-order of numbers and characters:
+% ...then combine these indices in the requested direction:
+% descending
+% ascending
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%natsort
+
+
+FILE: code/natsortfiles/natsortfiles.m
+% Alphanumeric / Natural-Order sort of a cell array of filenames/filepaths.
+%
+% (c) 2017 Stephen Cobeldick
+%
+% Alphanumeric sort of a cell array of filenames or filepaths: sorts by
+% character order and also by the values of any numbers that are within
+% the strings. Filenames, file-extensions, and directories (if supplied)
+% are split apart and are sorted separately: this ensures that shorter
+% filenames sort before longer ones (i.e. just like a dictionary sort).
+%
+%%% Syntax:
+%  Y = natsortfiles(X)
+%  Y = natsortfiles(X,xpr)
+%  Y = natsortfiles(X,xpr,<options>)
+% [Y,ndx] = natsortfiles(X,...)
+%
+% To sort all of the strings in a cell array use NATSORT (File Exchange 34464).
+% To sort the rows of a cell array of strings use NATSORTROWS (File Exchange 47433).
+%
+% See also NATSORT NATSORTROWS SORT SORTROWS NUM2SIP NUM2BIP CELLSTR REGEXP DIR FILEPARTS FULLFILE FILESEP
+%
+%% File Dependency %%
+%
+% NATSORTFILES requires the function NATSORT (File Exchange 34464). The inputs
+% <xpr> and <options> are passed directly to NATSORT: see NATSORT for case
+% sensitivity, sort direction, numeric substring matching, and other options.
+%
+%% Explanation %%
+%
+% Using SORT on filenames will sort any of char(0:45), including the printing
+% characters ' !"#$%&''()*+,-', before the file extension separator character '.'.
+% Therefore this function splits the name and extension and sorts them separately.
+%
+% Similarly the file separator character within filepaths can cause longer
+% directory names to sort before shorter ones, as char(0:46)<'/' and char(0:91)<'\'.
+% NATSORTFILES splits filepaths at each file separator character and sorts
+% every level of the directory hierarchy separately, ensuring that shorter
+% directory names sort before longer, regardless of the characters in the names.
+%
+%% Examples %%
+%
+%%% DIR and Cell Array:
+% D = 'C:\Test';
+% S = dir(fullfile(D,'*.txt'));
+% N = natsortfiles({S.name});
+% for k = 1:numel(N)
+%     fullfile(D,N{k})
+% end
+%
+% A = {'a2.txt', 'a10.txt', 'a1.txt'};
+% sort(A)         % Wrong numeric order:
+%  ans = 'a1.txt'  'a10.txt'  'a2.txt'
+% natsortfiles(A)
+%  ans = 'a1.txt'  'a2.txt'  'a10.txt'
+%
+% B = {'test_new.m'; 'test-old.m'; 'test.m'};
+% sort(B)         % Note '-' sorts before '.':
+%  ans =
+%    'test-old.m'
+%    'test.m'
+%    'test_new.m'
+% natsortfiles(B) % Shorter names before longer (dictionary sort):
+%  ans =
+%    'test.m'
+%    'test-old.m'
+%    'test_new.m'
+%
+% C = {'test2.m'; 'test10-old.m'; 'test.m'; 'test10.m'; 'test1.m'};
+% sort(C)         % Wrong numeric order:
+%  ans =
+%    'test.m'
+%    'test1.m'
+%    'test10-old.m'
+%    'test10.m'
+%    'test2.m'
+% natsortfiles(C) % Correct numeric order, shorter names before longer:
+%  ans =
+%    'test.m'
+%    'test1.m'
+%    'test2.m'
+%    'test10.m'
+%    'test10-old.m'
+%
+%%% Directory Names:
+% D = {'A2-old\test.m';'A10\test.m';'A2\test.m';'A1archive.zip';'A1\test.m'};
+% sort(D)         % Wrong numeric order, and '-' sorts before '\':
+%  ans =
+%    'A10\test.m'
+%    'A1\test.m'
+%    'A1archive.zip'
+%    'A2-old\test.m'
+%    'A2\test.m'
+% natsortfiles(D) % Shorter names before longer (dictionary sort):
+%  ans =
+%    'A1archive.zip'
+%    'A1\test.m'
+%    'A2\test.m'
+%    'A2-old\test.m'
+%    'A10\test.m'
+%
+%% Input and Output Arguments %%
+%
+% Please see NATSORT for a full description of <xpr> and the <options>.
+%
+%%% Inputs (*=default):
+%  X   = Cell of Strings, with filenames or filepaths to be sorted.
+%  xpr = String Token, regular expression to detect numeric substrings, '\d+'*.
+%  <options> can be supplied in any order and are passed directly to NATSORT.
+%
+%%% Outputs:
+%  Y   = Cell of Strings, <X> with the filenames sorted according to <options>.
+%  ndx = Numeric Matrix, same size as <X>. Indices such that Y = X(ndx).
+%
+% [Y,ndx] = natsortrows(X,*xpr,<options>)
+%% Input Wrangling %%
+%
+%
+%% Split and Sort File Names/Paths %%
+%
+% Split full filepaths into file [path,name,extension]:
+% Split path into {dir,subdir,subsubdir,...}:
+%pth = regexp(pth,filesep,'split'); % OS dependent
+% either / or \
+%
+% Natural-order sort of the file extension, file name, and directory names:
+%
+% Return the sorted array and indices:
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%natsortfiles
+
+
+FILE: code/stlTools/stlRead.m
+%STLREAD reads any STL file not depending on its format
+%V are the vertices
+%F are the faces
+%N are the normals
+%NAME is the name of the STL object (NOT the name of the STL file)
+
+
+FILE: code/stlTools/stlReadAscii.m
+%STLREADASCII reads a STL file written in ASCII format
+%V are the vertices
+%F are the faces
+%N are the normals
+%NAME is the name of the STL object (NOT the name of the STL file)
+%======================
+% STL ascii file format
+%======================
+% ASCII STL files have the following structure.  Technically each facet
+% could be any 2D shape, but in practice only triangular facets tend to be
+% used.  The present code ONLY works for meshes composed of triangular
+% facets.
+%
+% solid object_name
+% facet normal x y z
+%   outer loop
+%     vertex x y z
+%     vertex x y z
+%     vertex x y z
+%   endloop
+% endfacet
+%
+% <Repeat for all facets...>
+%
+% endsolid object_name
+% read all the file and put content in cells
+% remove all blank lines
+% read the STL name
+% read the vector normals
+% read the vertex coordinates (vertices)
+% number of vertices
+% number of faces
+% create faces
+% slim the file (delete duplicated vertices)
+
+
+FILE: code/stlTools/stlReadBinary.m
+%STLREADBINARY reads a STL file written in BINARY format
+%V are the vertices
+%F are the faces
+%N are the normals
+%NAME is the name of the STL object (NOT the name of the STL file)
+%=======================
+% STL binary file format
+%=======================
+% Binary STL files have an 84 byte header followed by 50-byte records, each
+% describing a single facet of the mesh.  Technically each facet could be
+% any 2D shape, but that would screw up the 50-byte-per-facet structure, so
+% in practice only triangular facets are used.  The present code ONLY works
+% for meshes composed of triangular facets.
+%
+% HEADER:
+% 80 bytes:  Header text
+% 4 bytes:   (int) The number of facets in the STL mesh
+%
+% DATA:
+% 4 bytes:  (float) normal x
+% 4 bytes:  (float) normal y
+% 4 bytes:  (float) normal z
+% 4 bytes:  (float) vertex1 x
+% 4 bytes:  (float) vertex1 y
+% 4 bytes:  (float) vertex1 z
+% 4 bytes:  (float) vertex2 x
+% 4 bytes:  (float) vertex2 y
+% 4 bytes:  (float) vertex2 z
+% 4 bytes:  (float) vertex3 x
+% 4 bytes:  (float) vertex3 y
+% 4 bytes:  (float) vertex3 z
+% 2 bytes:  Padding to make the data for each facet 50-bytes in length
+%   ...and repeat for next facet... 
+% reading header's 80 bytes
+% no object name in binary files!
+% reading the number of facets in the stl file (next 4 byters)
+% number of vertices
+% reserve memory for vectors (increase the processing speed)
+% read the data for each facet
+% read coordinates
+% x,y,z components of the facet's normal vector
+% x,y,z coordinates of vertex 1
+% x,y,z coordinates of vertex 2
+% x,y,z coordinates of vertex 3
+% face
+% Move to the start of the next facet (2 bytes of padding)
+% slim the file (delete duplicated vertices)
+
+
+FILE: code/stlTools/stlGetFormat.m
+%STLGETFORMAT identifies the format of the STL file and returns 'binary' or
+%'ascii'
+% Check the file size first, since binary files MUST have a size of 84+(50*n)
+% Go to the end of the file
+% Check the size of the file
+% Files with a size of 84+(50*n), might be either ascii or binary...
+% Read first 80 characters of the file.
+% For an ASCII file, the data should begin immediately (give or take a few
+% blank lines or spaces) and the first word must be 'solid'.
+% For a binary file, the first 80 characters contains the header.
+% It is bad practice to begin the header of a binary file with the word
+% 'solid', so it can be used to identify whether the file is ASCII or
+% binary.
+% go to the beginning of the file
+% trim leading and trailing spaces
+% take first 5 char
+% go to the end of the file minus 80 characters
+% Double check by reading the last 80 characters of the file.
+% For an ASCII file, the data should end (give or take a few
+% blank lines or spaces) with 'endsolid <object_name>'.
+% If the last 80 characters contains the word 'endsolid' then this
+% confirms that the file is indeed ASCII.
+
+
+FILE: code/stlTools/stlWrite.m
+%STLWRITE   Write STL file from patch or surface data.
+%
+%   STLWRITE(FILE, FV) writes a stereolithography (STL) file to FILE for a
+%   triangulated patch defined by FV (a structure with fields 'vertices'
+%   and 'faces').
+%
+%   STLWRITE(FILE, FACES, VERTICES) takes faces and vertices separately,
+%   rather than in an FV struct
+%
+%   STLWRITE(FILE, X, Y, Z) creates an STL file from surface data in X, Y,
+%   and Z. STLWRITE triangulates this gridded data into a triangulated
+%   surface using triangulation options specified below. X, Y and Z can be
+%   two-dimensional arrays with the same size. If X and Y are vectors with
+%   length equal to SIZE(Z,2) and SIZE(Z,1), respectively, they are passed
+%   through MESHGRID to create gridded data. If X or Y are scalar values,
+%   they are used to specify the X and Y spacing between grid points.
+%
+%   STLWRITE(...,'PropertyName',VALUE,'PropertyName',VALUE,...) writes an
+%   STL file using the following property values:
+%
+%   MODE          - File is written using 'binary' (default) or 'ascii'.
+%
+%   TITLE         - Header text (max 80 chars) written to the STL file.
+%
+%   TRIANGULATION - When used with gridded data, TRIANGULATION is either:
+%                       'delaunay'  - (default) Delaunay triangulation of X, Y
+%                       'f'         - Forward slash division of grid quads
+%                       'b'         - Back slash division of quadrilaterals
+%                       'x'         - Cross division of quadrilaterals
+%                   Note that 'f', 'b', or 't' triangulations now use an
+%                   inbuilt version of FEX entry 28327, "mesh2tri".
+%
+%   FACECOLOR     - Single colour (1-by-3) or one-colour-per-face (N-by-3) 
+%                   vector of RGB colours, for face/vertex input. RGB range
+%                   is 5 bits (0:31), stored in VisCAM/SolidView format
+%                   (http://en.wikipedia.org/wiki/STL_(file_format)#Color_in_binary_STL)
+%
+%   Example 1:
+%     % Write binary STL from face/vertex data
+%     tmpvol = false(20,20,20);      % Empty voxel volume
+%     tmpvol(8:12,8:12,5:15) = 1;    % Turn some voxels on
+%     fv = isosurface(~tmpvol, 0.5); % Make patch w. faces "out"
+%     stlwrite('test.stl',fv)        % Save to binary .stl
+%
+%   Example 2:
+%     % Write ascii STL from gridded data
+%     [X,Y] = deal(1:40);             % Create grid reference
+%     Z = peaks(40);                  % Create grid height
+%     stlwrite('test.stl',X,Y,Z,'mode','ascii')
+%
+%   Example 3:
+%     % Write binary STL with coloured faces
+%     cVals = fv.vertices(fv.faces(:,1),3); % Colour by Z height.
+%     cLims = [min(cVals) max(cVals)];      % Transform height values
+%     nCols = 255;  cMap = jet(nCols);      % onto an 8-bit colour map
+%     fColsDbl = interp1(linspace(cLims(1),cLims(2),nCols),cMap,cVals); 
+%     fCols8bit = fColsDbl*255; % Pass cols in 8bit (0-255) RGB triplets
+%     stlwrite('testCol.stl',fv,'FaceColor',fCols8bit) 
+%   Original idea adapted from surf2stl by Bill McDonald. Huge speed
+%   improvements implemented by Oliver Woodford. Non-Delaunay triangulation
+%   of quadrilateral surface courtesy of Kevin Moerman. FaceColor
+%   implementation by Grant Lohsen.
+%
+%   Author: Sven Holcombe, 11-24-11
+% Check valid filename path
+% Get faces, vertices, and user-defined options for writing
+% Create the facets
+% Compute their normals
+% Open the file for writing
+% Write the file contents
+% Write HEADER
+%     fprintf(fid,'solid %s\r\n',options.title);
+% Write DATA
+%     fprintf(fid,[...
+%         'facet normal %.7E %.7E %.7E\r\n' ...
+%         'outer loop\r\n' ...
+%         'vertex %.7E %.7E %.7E\r\n' ...
+%         'vertex %.7E %.7E %.7E\r\n' ...
+%         'vertex %.7E %.7E %.7E\r\n' ...
+%         'endloop\r\n' ...
+%         'endfacet\r\n'], facets);
+% Write FOOTER
+%     fprintf(fid,'endsolid %s\r\n',options.title);
+% BINARY
+% Write HEADER
+% Title
+% Number of facets
+% Write DATA
+% Add one uint16(0) to the end of each facet using a typecasting trick
+% Set the last bit to 0 (default) or supplied RGB
+% Close the file
+%fprintf('Wrote %d facets\n',size(facets, 2));
+%% Input handling subfunctions
+% Determine input type
+% stlwrite('file', FVstruct, ...)
+% Only consider numerical input PRIOR to the first non-numeric
+% stlwrite('file', X, Y, Z, ...)
+% Extract the matrix Z
+% Convert scalar XY to vectors
+% Extract X and Y
+% X,Y,Z were all provided as matrices
+% Convert vector XY to meshgrid
+% Convert to faces/vertices
+% stlwrite('file', FACES, VERTICES, ...)
+% Handle colour preparation
+%Set the Valid Color bit (bit 15)
+%Red color (10:15), Blue color (5:9), Green color (0:4)
+% function [F,V]=mesh2tri(X,Y,Z,tri_type)
+% 
+% Available from http://www.mathworks.com/matlabcentral/fileexchange/28327
+% Included here for convenience. Many thanks to Kevin Mattheus Moerman
+% kevinmoerman@hotmail.com
+% 15/07/2010
+%------------------------------------------------------------------------
+%Forward slash
+%Back slash
+%Cross
+
+
+FILE: code/stlTools/stlSlimVerts.m
+% PATCHSLIM removes duplicate vertices in surface meshes.
+% 
+% This function finds and removes duplicate vertices.
+%
+% USAGE: [v, f]=patchslim(v, f)
+%
+% Where v is the vertex list and f is the face list specifying vertex
+% connectivity.
+%
+% v contains the vertices for all triangles [3*n x 3].
+% f contains the vertex lists defining each triangle face [n x 3].
+%
+% This will reduce the size of typical v matrix by about a factor of 6.
+%
+% For more information see:
+%  http://www.esmonde-white.com/home/diversions/matlab-program-for-loading-stl-files
+%
+% Francis Esmonde-White, May 2010
+
+
+FILE: code/voxelization/voxelelize_genus.m
+%face_cent=FVcent.faces;
+%vert_cent = FVcent.vertices;
+%k = alphaShape(Points);
+% Francesc
+%[vertn,facen] = meshcheckrepair(vertn,facen,'meshfix'); 
+% repair the mesh
+% Francesc
+%[vertn,facen] = meshcheckrepair(vertn,facen,'meshfix'); 
+% Undoing the scaling and translation: F.Moreno-Noguer
+
+
+FILE: code/voxelization/polygon2voxel.m
+% This function POLYGON2VOXEL will convert a Triangulated Mesh into a
+% Voxel Volume which will contain the discretized mesh. Discretization of a 
+% polygon is done by splitting/refining the face, until the longest edge
+% is smaller than 0.5 voxels. Followed by setting the voxel beneath the vertice 
+% coordinates of that small triangle to one.
+%
+% Volume=polygon2voxel(FV,VolumeSize,Mode,Yxz);
+%
+% Inputs,
+%   FV : A struct containing FV.faces with a facelist Nx3 and FV.vertices
+%        with a Nx3 vertice list. Such a structure is created by Matlab
+%        Patch function
+%   VolumeSize : The size of the output volume, example [100 100 100]
+%   Mode : (optional) if set to:
+%               'none', The vertices data is directly used as coordinates
+%                       in the voxel volume.
+%               'wrap', The vertices data is directly used as coordinates
+%                       in the voxel volume, coordinates outside are 
+%                       circular wrapped to the inside.
+%               'auto', The vertices data is translated and 
+%                       scaled with a scalar to fit inside the new volume.
+%               'center', coordinate 0,0,0 is set as the center of the volume
+%                       instead of the corner of the voxel volume.
+%               'clamp', The vertices data is directly used as coordinates
+%                       in the voxel volume, coordinates outside are 
+%                       clamped to the inside.
+%   (Optional)
+%   Yxz : If true (default) use Matlab convention 1th dimension Y, 
+%         2th dimension X, and last dimension Z. Otherwise 1th 
+%         dimension is X, 2th Y and last Z.
+%
+%                        
+% Outputs,
+%   Volume : The 3D logical volume, with all voxels part of the discretized
+%           mesh one, and all other voxels zero.
+%
+% Example,
+%   % Compile the c-coded function
+%   mex polygon2voxel_double.c -v
+%
+%   % Load a triangulated mesh of a sphere
+%   load sphere; 
+%
+%   % Show the mesh
+%   figure, patch(FV,'FaceColor',[1 0 0]); axis square;
+%
+%   % Convert the mesh to a voxelvolume
+%   Volume=polygon2voxel(FV,[50 50 50],'auto');
+%
+%   % Show x,y,z slices
+%   figure,
+%   subplot(1,3,1), imshow(squeeze(Volume(25,:,:)));
+%   subplot(1,3,2), imshow(squeeze(Volume(:,25,:)));
+%   subplot(1,3,3), imshow(squeeze(Volume(:,:,25)));
+%
+%   %  Show iso surface of result
+%   figure, patch(isosurface(Volume,0.1), 'Facecolor', [1 0 0]);
+%
+% Example2,
+%   % Compile the c-coded function
+%   mex polygon2voxel_double.c -v
+%
+%   % Make A Volume with a few blocks
+%   I = false(120,120,120);
+%   I(40:60,50:70,60:80)=1; I(60:90,45:75,60:90)=1;
+%   I(20:60,40:80,20:60)=1; I(60:110,35:85,10:60)=1;
+%
+%   % Convert the volume to a triangulated mesh
+%   FV = isosurface(I,0.8);
+%
+%   % Convert the triangulated mesh back to a surface in a volume
+%   J = polygon2voxel(FV,[120, 120, 120],'none'); 
+%   % Fill the volume
+%   J=imfill(J,'holes');
+% 
+%   % Differences between original and reconstructed
+%   VD = abs(J-I);
+%
+%   % Show the original Mesh and Mesh of new volume
+%   figure, 
+%   subplot(1,3,1),  title('original')
+%     patch(FV,'facecolor',[1 0 0],'edgecolor','none'), camlight;view(3);
+%   subplot(1,3,2), title('converted');
+%     patch(isosurface(J,0.8),'facecolor',[0 0 1],'edgecolor','none'), camlight;view(3);
+%   subplot(1,3,3), title('difference');
+%     patch(isosurface(VD,0.8),'facecolor',[0 0 1],'edgecolor','none'), camlight;view(3); 
+%
+% Function is written by D.Kroon University of Twente (May 2009)
+% 
+% Simple modification by Jianxiong to fill in the holes
+% Check VolumeSize size
+% Volume Size must always be an integer value
+% Check size of vertice array
+% Check size of vertice array
+% Check if vertice indices exist
+% Check if vertice indices exist
+% Matlab dimension convention YXZ
+% auto
+% Make all vertices-coordinates positive
+% Make the vertices-coordinates to range from 0 to 100
+% center
+% Center the vertices
+%wrap
+% clamp
+% Separate the columns;
+% Volume size to double
+% Call the mex function
+
+
+FILE: code/voxelization/perturb_volume_min_lg.m
+% 6 connected neighborhood
+
+
+FILE: code/voxelization/perturb_volume_same_min.m
+% 6 connected neighborhood
+
+
+FILE: code/voxelization/compute_edges.m
+% compute_edges - from a list of faces, compute the list of (unique) edges.
+%
+%   edge = compute_edges(face);
+%
+%   Copyright (c) 2004 Gabriel Peyré
+% sort pair of vertex
+% unique id
+
+
+FILE: code/voxelization/check_face_vertex.m
+% check_face_vertex - check that vertices and faces have the correct size
+%
+%   [vertex,face] = check_face_vertex(vertex,face);
+%
+%   Copyright (c) 2007 Gabriel Peyre
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% for flat triangles
+% a = a';
+
+
+FILE: code/voxelization/topology_axis_fixtop.m
+% once filled, do not fill again in subsequent frame , ensure filling is
+% [Xx,Yx,Zx]=ind2sub(size(Volume),find(Volume_fill_x(:)));
+% Pointsx=[Xx,Yx,Zx];
+% kx = alphaShape(Pointsx);
+% [facenx,vertnx] = boundaryFacets(kx);
+% genusx=calc_genus(vertnx,facenx);
+% figure;plot(kx);
+%
+%
+%
+% Volume_fill_y=false(size(Volume));
+% for pp=1:sy
+% Volume_fill_y(:,pp,:)=imfill(squeeze(Volume(:,pp,:)),'holes');
+% end
+% [Xx,Yx,Zx]=ind2sub(size(Volume),find(Volume_fill_y(:)));
+% Pointsx=[Xx,Yx,Zx];
+% ky = alphaShape(Pointsx);
+% [facenx,vertnx] = boundaryFacets(ky);
+% genusy=calc_genus(vertnx,facenx);
+% figure;plot(ky);
+%
+%
+%
+% Volume_fill_z=false(size(Volume));
+% for pp=1:sz
+% Volume_fill_z(:,:,pp)=imfill(squeeze(Volume(:,:,pp)),'holes');
+% end
+% [Xx,Yx,Zx]=ind2sub(size(Volume),find(Volume_fill_z(:)));
+% Pointsx=[Xx,Yx,Zx];
+% kz = alphaShape(Pointsx,k.Alpha);
+% [facenx,vertnx] = boundaryFacets(kz);
+% genusz=calc_genus(vertnx,facenx);
+% figure;plot(k);
+% figure;plot(kz);
+
+
+FILE: code/voxelization/topologyfix_medial.m
+% remove dangling edges
+% Make the adjacency matrix symmetric to be safe for an undirected graph
+% Ensure 0s and 1s
+% Create an UNDIRECTED graph object
+% Now run cyclebasis
+% fit a plane and check
+% now sequantially add volumes under constraints till genus zero
+% check if region is enclosed
+%do it directly on shape
+% find common vertices and faces
+% if disp
+%     idx=find(Volume_new(:));
+%     [Xd,Yd,Zd]=ind2sub(size(Volume_new),idx);
+%     Pointsd=[Xd,Yd,Zd];
+%     k_disp = alphaShape(Pointsd);
+%     figure;plot(k_disp);
+% end
+%
+% %top fill disp
+% if disp
+%     idx=find(Volume_top(:));
+%     [Xd,Yd,Zd]=ind2sub(size(Volume_top),idx);
+%     Pointsd=[Xd,Yd,Zd];
+%     k_disp = alphaShape(Pointsd);
+%     figure;plot(k_disp);
+% end
+%
+% if disp
+%     j=4;
+%     Points_cycles=Points_temp(cycles_all1{j},:);
+%     figure();
+%     col=[.7 .7 .8];
+%     hiso = patch(isosurface(Volume,0),'FaceColor',col,'EdgeColor','none');
+%     hiso2 = patch(isocaps(Volume,0),'FaceColor',col,'EdgeColor','none');
+%     axis equal;axis off;
+%     lighting phong;
+%     isonormals(Volume,hiso);
+%     alpha(0.5);
+%     set(gca,'DataAspectRatio',[1 1 1])
+%     camlight;
+%     hold on;
+%     plot3(Points_cycles(:,2),Points_cycles(:,1),Points_cycles(:,3),'square','Markersize',4,'MarkerFaceColor','r','Color','r');
+%     set(gcf,'Color','white');
+%     view(140,80)
+% end
+%
+%
+% if disp
+%     figure();
+%     col=[.7 .7 .8];
+%     hiso = patch(isosurface(Volume,0),'FaceColor',col,'EdgeColor','none');
+%     hiso2 = patch(isocaps(Volume,0),'FaceColor',col,'EdgeColor','none');
+%     axis equal;axis off;
+%     lighting phong;
+%     isonormals(Volume,hiso);
+%     alpha(0.5);
+%     set(gca,'DataAspectRatio',[1 1 1])
+%     camlight;
+%     hold on;
+%     w=size(skel,1);
+%     l=size(skel,2);
+%     h=size(skel,3);
+%     [x,y,z]=ind2sub([w,l,h],find(skel(:)));
+%     plot3(y,x,z,'square','Markersize',4,'MarkerFaceColor','r','Color','r');
+%     set(gcf,'Color','white');
+%     view(140,80)
+% end
+% 
+% if disp
+%     figure();
+%     col=[.7 .7 .8];
+%     hiso = patch(isosurface(Volume,0),'FaceColor',col,'EdgeColor','none');
+%     hiso2 = patch(isocaps(Volume,0),'FaceColor',col,'EdgeColor','none');
+%     axis equal;axis off;
+%     lighting phong;
+%     isonormals(Volume,hiso);
+%     alpha(0.5);
+%     set(gca,'DataAspectRatio',[1 1 1])
+%     camlight;
+%     hold on;
+%     plot3(Points_temp(:,2),Points_temp(:,1),Points_temp(:,3),'square','Markersize',4,'MarkerFaceColor','r','Color','r');
+%     set(gcf,'Color','white');
+%     view(140,80)
+% end
+
+
+FILE: code/voxelization/Skeleton3D/Skeleton3D.m
+% Parallel medial axis thinning of a 3D binary volume
+%
+% MATLAB vectorized implementation of the algorithm by
+% Ta-Chih Lee, Rangasami L. Kashyap and Chong-Nam Chu
+% "Building skeleton models via 3-D medial surface/axis thinning algorithms."
+% Computer Vision, Graphics, and Image Processing, 56(6):462–478, 1994.
+%
+% Inspired by the ITK implementation by Hanno Homann
+% http://hdl.handle.net/1926/1292
+% and the Fiji/ImageJ plugin by Ignacio Arganda-Carreras
+% http://fiji.sc/wiki/index.php/Skeletonize3D
+%
+%
+% Philip Kollmannsberger 9/2013
+% philipk@gmx.net
+% pad volume with zeros to avoid edge effects
+% number of foreground voxels
+% fill lookup table
+% number of iterations
+% loop until no change for all six border types
+% loop over all 6 directions
+% identify border voxels as candidates
+% if excluded voxels were passed, remove them from candidates
+% make sure all candidates are indeed foreground voxels
+% get subscript indices of candidates
+% get 26-neighbourhood of candidates in volume
+% remove all endpoints (exactly one nb) from list
+% remove all non-Euler-invariant points from list
+% remove all non-simple points from list
+% if any candidates left: divide into 8 independent subvolumes
+% do parallel re-checking for all points in each subvolume
+% remove points
+% if topology changed: revert
+% at least one voxel removed
+% get rid of padded zeros
+
+
+FILE: code/voxelization/Skeleton3D/p_EulerInv.m
+% Calculate Euler characteristic for each octant and sum up
+% Octant SWU
+% Octant SEU
+% Octant NWU
+% Octant NEU
+% Octant SWB
+% Octant SEB
+% Octant NWB
+% Octant NEB
+
+
+FILE: code/voxelization/Skeleton3D/p_is_simple.m
+% copy neighbors for labeling
+% for all points in the neighborhood
+% start recursion with any octant that contains the point i
+
+
+FILE: code/voxelization/Skeleton3D/p_oct_label.m
+% check if there are points in the octant with value 1
+% set points in this octant to current label
+% and recurseive labeling of adjacent octants

@@ -1,0 +1,8 @@
+# One-skull orbital example. Python 3.12; numerical versions from the supplied release.
+numpy==2.2.6
+scipy==1.13.1
+pandas==2.3.3
+trimesh==4.8.3
+rtree==1.4.1
+networkx==3.6
+matplotlib==3.10.8

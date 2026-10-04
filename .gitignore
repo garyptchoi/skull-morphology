@@ -1,0 +1,21 @@
+# Results written by the scripts (each script writes into output/ next to it)
+**/output/
+
+# Working folders of the remeshing step
+1_remeshing/dataset_CT/*
+!1_remeshing/dataset_CT/README.md
+1_remeshing/dataset_remeshed/
+1_remeshing/results*/
+# MeshFix is downloaded by the MATLAB setup script
+1_remeshing/Remeshing/code/iso2mesh/bin/
+
+# Local archive of one-off tools and old outputs (kept on your computer, not uploaded)
+archive/
+
+# Python, IDE and system files
+__pycache__/
+*.pyc
+.idea/
+.venv/
+venv/
+.DS_Store

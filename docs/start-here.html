@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Start here — Skull morphology</title><link rel="stylesheet" href="assets/site.css"></head>
+<body><a class="skip" href="#main">Skip to content</a><div class="shell">
+<header class="masthead"><a class="brand" href="index.html">skull / morphology<small>GEOMETRY · BIOLOGY · CODE</small></a>
+<nav aria-label="Main navigation"><a href="index.html">Overview</a><a href="start-here.html">Start here</a><a class="repo-link" href="https://github.com/kaikwanlau/skull-morphology">GitHub ↗</a></nav></header>
+<div class="article-layout"><aside class="article-nav" aria-label="Guide contents"><a href="index.html">Project overview</a><a href="start-here.html" aria-current="page">Start here</a><a href="reproduce.html">Reproduce</a><a href="reference.html">Script reference</a><a href="data.html">Data sources</a><a href="citation.html">Citation</a></aside><main class="article" id="main"><h1 id="getting-started">Getting started</h1>
+<p>This guide covers installing the code, fitting an example skull and analysing your own prepared STL meshes.</p>
+<p><a href="index.html">Project overview</a> · <a href="index.html">Visual guide</a> · <a href="assets/tutorial.mp4">Video tutorial, 7:09</a> · <a href="reproduce.html">Reproduction guide</a></p>
+<h2 id="1-download-and-install">1. Download and install</h2>
+<p>On the repository page, choose <strong>Code → Download ZIP</strong> and extract it. Keep the folders together. Install <strong>Python 3.12</strong> if you do not already have it. PyCharm or VS Code is optional.</p>
+<p>Open a terminal in the extracted project folder, where <code>quickstart.py</code> and <code>requirements.txt</code> are located.</p>
+<p><strong>macOS / Linux</strong></p>
+<pre><code class="language-bash">python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-quickstart.txt
+python quickstart.py
+</code></pre>
+<p><strong>Windows Command Prompt</strong></p>
+<pre><code class="language-bat">py -3.12 -m venv .venv
+.venv\Scripts\activate.bat
+python -m pip install -r requirements-quickstart.txt
+python quickstart.py
+</code></pre>
+<p>If using an editor, select this <code>.venv</code> as the project interpreter. Packages installed in a different Python environment will not be visible to it.</p>
+<p>The first example uses the supplied, prepared <code>G.DifficilisA.stl</code> skull. It fits one orbit with the existing <code>4_two_orbits/verify_fit.py</code> implementation. It does not require MATLAB, a display server or the interactive PyVista viewer.</p>
+<h2 id="2-open-the-results">2. Open the results</h2>
+<p>The terminal prints the output folder. Open these files in <code>output/quickstart/</code>:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">What to do with it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>inspection.png</code></td>
+<td style="text-align: left;">Inspect both lateral views and the dorsal view. Confirm that the blue sphere and red inliers lie in the orbit.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>measurements.csv</code></td>
+<td style="text-align: left;">Open in Excel or your analysis software. One row contains dimensions, radius, curvature and fit diagnostics.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>run.json</code></td>
+<td style="text-align: left;">Keep with the results. It records the mesh checksum, settings, Python version and package versions.</td>
+</tr>
+</tbody>
+</table>
+<p>For a successful numerical fit, <code>status</code> is <code>ok</code>. This describes the numerical routine, not a biological decision. <code>s4_screen_pass</code> reports whether the fit meets the SI Section S4 count/error screen; inspect the anatomy even when it is <code>True</code>.</p>
+<p><img alt="Static three-view orbital inspection for the supplied G.DifficilisA specimen." src="assets/example-inspection.png" /></p>
+<p><a href="assets/example-measurements.csv">Example CSV</a> · <a href="assets/example-run.json">Example run record</a></p>
+<p>The supplied example should give an orbit radius of about <strong>3.56 mm</strong>. Small numerical differences can depend on the software environment. If the result is substantially different, compare your settings and versions before applying the workflow to other skulls.</p>
+<p>Running the example again replaces the files in its output folder. Use a new <code>--output</code> directory to retain an earlier run.</p>
+<h2 id="use-your-own-skulls">Use your own skulls</h2>
+<h3 id="3-prepare-the-inputs">3. Prepare the inputs</h3>
+<p>For the bird fitting scripts, use:</p>
+<ul>
+<li><strong>One skull per triangular STL file</strong>, with coordinates in <strong>millimetres</strong>. STL does not record a unit label; confirm the scale in your source software.</li>
+<li><strong>The intended anatomical orientation:</strong> x along the skull, beak at −x, posterior at +x, z dorsal. Compare with a supplied mesh. The fitters do not orient an arbitrary raw scan for you.</li>
+<li><strong>Prepared mesh resolution comparable to the supplied specimens.</strong> The bird meshes were remeshed; the paper describes an average vertex spacing of about 0.8 mm. This is a study characteristic, not a universal prescription for every taxon or scale.</li>
+</ul>
+<p>Do not rescale each skull to unit size: the radius bounds and curvature-neighbourhood radius use physical units. The numerical routines retain the largest connected component; inspect fragmented inputs so that the retained component is the intended skull.</p>
+<p>Raw scans need preparation first. The MATLAB remeshing code is included in <code>1_remeshing/Remeshing/</code>. Install <strong>MATLAB and the required toolboxes</strong>, then follow the <a href="remeshing.html">remeshing setup</a> before running the Python wrapper. The already prepared example data let you start without this step.</p>
+<h3 id="4-try-one-of-your-prepared-bird-skulls">4. Try one of your prepared bird skulls</h3>
+<p>From the project folder:</p>
+<pre><code class="language-bash">python quickstart.py --mesh &quot;data/My_skulls/specimen.stl&quot; --output &quot;output/specimen-check&quot;
+</code></pre>
+<p>Replace the quoted path with your file. This still uses the finch settings. If you need other settings or a full folder of skulls, use the batch script below.</p>
+<h3 id="5-measure-a-folder-of-skulls">5. Measure a folder of skulls</h3>
+<p>Install the full dependencies in the same environment:</p>
+<pre><code class="language-bash">python -m pip install -r requirements.txt
+</code></pre>
+<p>Create <code>data/My_skulls/</code> and place your prepared STL files there. Open <code>2_fitting/fit_sphere_batch.py</code>. Replace its existing <code>DIRECTORY_PATHS</code> list with:</p>
+<pre><code class="language-python">DIRECTORY_PATHS = [paths.DATA / &quot;My_skulls&quot;]
+</code></pre>
+<p>The default list processes the honeycreepers, their cardueline relatives and the rodents. Replace the whole list to run only your own specimens. Keep filenames unique across input folders because image filenames use each specimen’s stem.</p>
+<p>Then run the script from the project folder:</p>
+<pre><code class="language-bash">python 2_fitting/fit_sphere_batch.py
+</code></pre>
+<p>Or select that file in PyCharm and press <strong>Run</strong>. By default it saves images without opening one window per skull. The outputs are:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Output in <code>2_fitting/output/fit_sphere_batch/</code></th>
+<th style="text-align: left;">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>measurement_sphere_fitting_ALL.xlsx</code></td>
+<td style="text-align: left;">Measurements and diagnostic status; rodent orbital measurements are left blank</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>images/</code></td>
+<td style="text-align: left;">Three-view inspection image for each successful fit</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>failed_files.txt</code></td>
+<td style="text-align: left;">Files with no numerical fit and rejected seed attempts</td>
+</tr>
+</tbody>
+</table>
+<p>Check the console and failed-file log as well as the workbook. An absent specimen is not a zero measurement. Keep runs in separate copies or move the generated output folder before rerunning if you want to preserve prior results.</p>
+<p>The Peromyscus examples do not yield anatomical orbit fits, so their fitted radii, curvature and other orbital fields are omitted from measurement exports. Their rows remain for specimen identification, with an explanatory status. Remeshing settings are recorded by the remeshing step rather than added as measurement columns.</p>
+<h3 id="6-read-the-measurement-columns">6. Read the measurement columns</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Column in the batch workbook</th>
+<th style="text-align: left;">Meaning</th>
+<th style="text-align: left;">Units</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>length_x</code>, <code>width_y</code>, <code>height_z</code></td>
+<td style="text-align: left;">Extents of the axis-aligned bounding box</td>
+<td style="text-align: left;">mm</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>sphere_radius</code></td>
+<td style="text-align: left;">Radius of the sphere fitted to the selected orbit surface</td>
+<td style="text-align: left;">mm</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>curvature</code></td>
+<td style="text-align: left;">Reciprocal of that radius, <code>1/r</code></td>
+<td style="text-align: left;">mm⁻¹</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>n_candidates</code></td>
+<td style="text-align: left;">Selected connected points before robust refinement</td>
+<td style="text-align: left;">Count</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>n_inliers</code></td>
+<td style="text-align: left;">Points retained after refinement</td>
+<td style="text-align: left;">Count</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>rms_residual_mm</code></td>
+<td style="text-align: left;">RMS radial distance of retained points from the fitted sphere</td>
+<td style="text-align: left;">mm</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>rms_over_radius</code></td>
+<td style="text-align: left;">RMS divided by fitted radius; <code>0.10</code> means 10%</td>
+<td style="text-align: left;">Dimensionless</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fit_side</code></td>
+<td style="text-align: left;">Sign of the fitted centre’s y coordinate; inspect before assigning anatomical left/right</td>
+<td style="text-align: left;">Sign</td>
+</tr>
+</tbody>
+</table>
+<p>The quickstart CSV uses the original headless fitter’s names: <code>rms_mm</code> and <code>fit_err_pct</code>. <strong><code>fit_err_pct = 10</code> means 10%; <code>rms_over_radius = 0.10</code> means the same thing.</strong></p>
+<h3 id="7-inspect-and-screen-every-fit">7. Inspect and screen every fit</h3>
+<p>Open the images. Check that the selected patch belongs to the orbital socket, that the sphere is not fitted to a damaged edge or another cavity, and that enough of the orbit lies inside the search band.</p>
+<p>The SI Section S4 generalization analysis uses <strong>at least 40 inliers and RMS/radius ≤ 0.10</strong> as a diagnostic screen. These criteria are necessary rather than sufficient for that analysis; they also flag some fits in the original finch sample. They are <strong>not automatically applied to exclude rows</strong> by <code>fit_sphere_batch.py</code>.</p>
+<p><strong>Video clarification, around 4:20:</strong> the supplied tutorial calls this “a fit is accepted when…”. Read that as the S4 diagnostic screen, followed by visual inspection. It is not a universal acceptance rule or the script’s internal candidate threshold. The internal <code>MIN_CONNECTED_POINTS = 20</code> checks the candidate patch before refinement, which is a different quantity.</p>
+<h3 id="8-adapt-settings-for-a-different-taxon">8. Adapt settings for a different taxon</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Setting</th>
+<th style="text-align: left;">Supplied finch default</th>
+<th style="text-align: left;">What it controls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>ROI_START_PERCENT</code>, <code>ROI_END_PERCENT</code></td>
+<td style="text-align: left;"><code>0.30</code>, <code>0.70</code></td>
+<td style="text-align: left;">Search band as a fraction of the skull’s x extent, starting at minimum x</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>MIN_ORBIT_RADIUS</code>, <code>MAX_ORBIT_RADIUS</code></td>
+<td style="text-align: left;"><code>2.0</code>, <code>6.0</code></td>
+<td style="text-align: left;">Strict radius bounds, in mm</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>CURVATURE_RADIUS</code></td>
+<td style="text-align: left;"><code>2.0</code></td>
+<td style="text-align: left;">Neighbourhood radius for curvature, in mm</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TARGET_POINT_COUNT</code></td>
+<td style="text-align: left;"><code>400</code></td>
+<td style="text-align: left;">Candidate vertices ranked by concavity</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>MIN_CONNECTED_POINTS</code></td>
+<td style="text-align: left;"><code>20</code></td>
+<td style="text-align: left;">Minimum connected candidate patch size</td>
+</tr>
+</tbody>
+</table>
+<p>Choose settings for the anatomical scale and mesh preparation, document them, and inspect outcomes. Do not widen thresholds merely to force numerical success. Long bills can shift the orbit relative to the fixed length-based band.</p>
+<p>The batch script supports <code>FOLDER_OVERRIDES</code> keyed by folder name. It already has a <code>Peromyscus</code> override, so a folder’s name can change the settings it receives. The human example script uses a <strong>10–50% search band and a 2–60 mm radius window</strong>. See <a href="data.html">data sources and scope</a> for the results and limitations of the mammalian examples.</p>
+<h3 id="9-fit-the-neurocranium">9. Fit the neurocranium</h3>
+<p>In <code>2_fitting/fit_ellipsoid.py</code>, set:</p>
+<pre><code class="language-python">DIRECTORY_PATH = str(paths.DATA / &quot;My_skulls&quot;)
+ENABLE_VISUALIZATION = True
+</code></pre>
+<p>Run:</p>
+<pre><code class="language-bash">python 2_fitting/fit_ellipsoid.py
+</code></pre>
+<p>Close each 3D window to continue to the next specimen. The batch workbook is written at the end to <code>2_fitting/output/fit_ellipsoid/measurement_ellipsoid_fitting_ALL.xlsx</code>. The default ROI is the posterior 40% of the x extent.</p>
+<p><code>ellipsoid_axis_a</code>, <code>ellipsoid_axis_b</code> and <code>ellipsoid_axis_c</code> are <strong>semi-axis lengths</strong> along the coordinate axes. They are not full diameters or direct brain volumes. This axis-aligned fit depends on the chosen orientation.</p>
+<h2 id="if-something-goes-wrong">If something goes wrong</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Symptom</th>
+<th style="text-align: left;">Next check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>ModuleNotFoundError</code></td>
+<td style="text-align: left;">Activate <code>.venv</code>; install the requirements using that interpreter’s <code>python -m pip</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;">No STL files found</td>
+<td style="text-align: left;">Check the folder path and that the ZIP was extracted. Use lowercase <code>.stl</code> for all original scripts; the batch script also accepts <code>.STL</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;">3D window seems to pause processing</td>
+<td style="text-align: left;">Close it to continue; this is expected for the interactive scripts.</td>
+</tr>
+<tr>
+<td style="text-align: left;">PyVista/OpenGL rendering fails</td>
+<td style="text-align: left;">Run <code>quickstart.py</code> for a static image, or set <code>ENABLE_VISUALIZATION = False</code> in the batch script to export measurements and use a working viewer separately.</td>
+</tr>
+<tr>
+<td style="text-align: left;">No fit, too few inliers, implausible sphere</td>
+<td style="text-align: left;">Check units, orientation, fragmentation, resolution and ROI placement before adjusting settings.</td>
+</tr>
+<tr>
+<td style="text-align: left;">MATLAB remeshing code or dependencies not found</td>
+<td style="text-align: left;">Keep <code>1_remeshing/Remeshing/</code> with the repository and run <code>setup_remeshing</code> in MATLAB. See <a href="remeshing.html">remeshing setup</a>.</td>
+</tr>
+<tr>
+<td style="text-align: left;">Results differ from the paper</td>
+<td style="text-align: left;">Record versions and settings, check which workbook was used, and follow the reproduction guide.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="reproduce.html">Next: reproduce the paper</a> · <a href="reference.html">All scripts</a></p></main></div>
+<footer class="footer"><span>SKULL / MORPHOLOGY — RESEARCH GUIDE</span><a href="index.html">Back to the visual guide ↑</a></footer>
+</div></body></html>

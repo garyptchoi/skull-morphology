@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Script reference — Skull morphology</title><link rel="stylesheet" href="assets/site.css"></head>
+<body><a class="skip" href="#main">Skip to content</a><div class="shell">
+<header class="masthead"><a class="brand" href="index.html">skull / morphology<small>GEOMETRY · BIOLOGY · CODE</small></a>
+<nav aria-label="Main navigation"><a href="index.html">Overview</a><a href="start-here.html">Start here</a><a class="repo-link" href="https://github.com/kaikwanlau/skull-morphology">GitHub ↗</a></nav></header>
+<div class="article-layout"><aside class="article-nav" aria-label="Guide contents"><a href="index.html">Project overview</a><a href="start-here.html">Start here</a><a href="reproduce.html">Reproduce</a><a href="reference.html" aria-current="page">Script reference</a><a href="data.html">Data sources</a><a href="citation.html">Citation</a></aside><main class="article" id="main"><h1 id="script-reference">Script reference</h1>
+<p>All paths below are relative to the repository root. Keep the numbered folders and <code>paths.py</code> together.</p>
+<h2 id="entry-points">Entry points</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Script</th>
+<th style="text-align: left;">Input</th>
+<th style="text-align: left;">Output / behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>quickstart.py</code></td>
+<td style="text-align: left;">One supplied or user-specified prepared STL</td>
+<td style="text-align: left;"><code>output/quickstart/</code>: CSV, static three-view image, settings/version JSON; configurable with <code>--output</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>paths.py</code></td>
+<td style="text-align: left;">Repository location</td>
+<td style="text-align: left;">Shared paths; <code>output_dir()</code> creates a per-script output folder</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-remeshing">1. Remeshing</h2>
+<p>The MATLAB source is included in <code>1_remeshing/Remeshing/</code>. Install MATLAB and its required toolboxes, then follow the <a href="remeshing.html">remeshing setup</a>. These wrappers are optional for the supplied prepared meshes.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Script</th>
+<th style="text-align: left;">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>1_remeshing/Remeshing/setup_remeshing.m</code></td>
+<td style="text-align: left;">Checks MATLAB dependencies and installs MeshFix</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>1_remeshing/Remeshing/remesh_batch.m</code></td>
+<td style="text-align: left;">Voxelizes, repairs and smooths raw STL meshes; writes a log for each batch</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>1_remeshing/Remeshing/test_remeshing.m</code></td>
+<td style="text-align: left;">Checks the installation with a synthetic sphere</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>1_remeshing/remesh_in_pycharm.py</code></td>
+<td style="text-align: left;">Watches the raw-input folder and calls MATLAB to write remeshed STLs and run logs; <code>--once</code> processes the current files and exits</td>
+</tr>
+</tbody>
+</table>
+<p>Use <code>remesh_in_pycharm.py</code> for both bird and human raw meshes. The Python wrapper and MATLAB batch function use a default remeshing parameter of 60. These are tools for new raw inputs, not an automated replay of the specimen-specific preprocessing used to produce the released meshes. Use the already released meshes for the documented reproduction route; document the settings used for new raw scans.</p>
+<h2 id="2-fitting">2. Fitting</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Script</th>
+<th style="text-align: left;">Default input</th>
+<th style="text-align: left;">Output / behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>2_fitting/fit_sphere.py</code></td>
+<td style="text-align: left;"><code>paths.FINCHES</code></td>
+<td style="text-align: left;">Interactive sphere fits; <code>output/fit_sphere/measurement_sphere_fitting_ALL.xlsx</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/fit_ellipsoid.py</code></td>
+<td style="text-align: left;"><code>paths.FINCHES</code></td>
+<td style="text-align: left;">Interactive ellipsoid fits; <code>output/fit_ellipsoid/measurement_ellipsoid_fitting_ALL.xlsx</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/fit_sphere_batch.py</code></td>
+<td style="text-align: left;">Carduelines, honeycreepers, Peromyscus</td>
+<td style="text-align: left;"><code>output/fit_sphere_batch/</code>: workbook, images and failure log; folder-specific settings apply</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/render_figures.py</code></td>
+<td style="text-align: left;">Batch-fitting workbook and meshes</td>
+<td style="text-align: left;">Redraws inspection images from saved fit parameters</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/fit_sphere_human_head_setting.py</code></td>
+<td style="text-align: left;"><code>paths.HUMAN</code></td>
+<td style="text-align: left;">Human-cranium fitting with its own search band and radius limits</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/bounding_AABB.py</code></td>
+<td style="text-align: left;">A selected supplied skull</td>
+<td style="text-align: left;">Axis-aligned bounding-box visualization</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/bounding_OBB.py</code></td>
+<td style="text-align: left;">A selected supplied skull</td>
+<td style="text-align: left;">Oriented bounding-box visualization</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/check_orbit.py</code></td>
+<td style="text-align: left;">A prepared STL folder supplied with <code>--folder</code></td>
+<td style="text-align: left;">Separate fitting and inspection workflow; use <code>--results</code> to choose the output folder and <code>--no-show</code> to save images without opening windows</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>2_fitting/fit_sphere_logged.py</code></td>
+<td style="text-align: left;">A prepared STL folder</td>
+<td style="text-align: left;">Logged orbital fitter used by <code>check_orbit.py</code>; saves fit diagnostics and inspection images</td>
+</tr>
+</tbody>
+</table>
+<p>Settings are edited near the top of each original script (inside the main block for some scripts). They are not command-line flags unless explicitly documented.</p>
+<p>Measurement exports omit remeshing-parameter columns. For the two Peromyscus examples, orbital fitting fields are blank and marked as not identifying an orbit. Diagnostic figures can still show the fitted sphere to illustrate this limitation. The figure script's internal <code>figure_cache</code> retains the diagnostic fits needed to redraw those figures; it is not a table of orbital measurements.</p>
+<h2 id="3-statistics">3. Statistics</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Script</th>
+<th style="text-align: left;">Input</th>
+<th style="text-align: left;">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>3_statistics/correlation.py</code></td>
+<td style="text-align: left;"><code>data/Dataset.xlsx</code></td>
+<td style="text-align: left;">Pearson/Spearman summaries and scatter plots</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>3_statistics/correlation_combined.py</code></td>
+<td style="text-align: left;"><code>data/Dataset.xlsx</code></td>
+<td style="text-align: left;">Correlation tables involving the ellipsoid axes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>3_statistics/correlation_specific.py</code></td>
+<td style="text-align: left;"><code>data/Dataset.xlsx</code></td>
+<td style="text-align: left;">Selected regression and its model summary</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>3_statistics/modelling.py</code></td>
+<td style="text-align: left;"><code>data/Dataset_training.xlsx</code></td>
+<td style="text-align: left;">Multiple linear regression of curvature on dimensions; training-data plot</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-bilateral-fits">4. Bilateral fits</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Script</th>
+<th style="text-align: left;">Purpose</th>
+<th style="text-align: left;">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>4_two_orbits/two_orbit.py</code></td>
+<td style="text-align: left;">Fits the opposite orbit and draws the pair</td>
+<td style="text-align: left;"><code>output/two_orbit/</code>, including <code>two_orbit_results.csv</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>4_two_orbits/verify_fit.py</code></td>
+<td style="text-align: left;">Headless orbital fitter and standalone batch diagnostics</td>
+<td style="text-align: left;"><code>output/verify_fit/verify_fit_results.csv</code> by default</td>
+</tr>
+</tbody>
+</table>
+<p><code>verify_fit.py</code> also accepts mesh-folder arguments and an optional output CSV path. It uses its own finch defaults and does not automatically inherit <code>fit_sphere_batch.py</code>’s folder overrides.</p>
+<h2 id="5-figures-and-animation">5. Figures and animation</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Script</th>
+<th style="text-align: left;">Options</th>
+<th style="text-align: left;">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>5_figures/figure.py</code></td>
+<td style="text-align: left;"><code>--only 4,9,S2</code>, <code>--eps</code>, <code>--refit</code></td>
+<td style="text-align: left;"><code>output/figure/figures/</code>, with a separate measurement cache</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>5_figures/demo_animation.py</code></td>
+<td style="text-align: left;">Settings in the file</td>
+<td style="text-align: left;"><code>output/demo_animation/</code>: GIF, MP4 and frames</td>
+</tr>
+</tbody>
+</table>
+<p>The figure builder uses prepared meshes plus the included <a href="figure-inputs.html">figure inputs</a>. It is not a converter for the supplied manuscript PDFs.</p>
+<h2 id="6-verification">6. Verification</h2>
+<p><code>6_verification/verify_all.py</code> recomputes measurements and compares them with encoded expected values. Configuration is at the top of the file. It writes reports, tables and workbooks under <code>6_verification/output/verify_all/</code>. See the <a href="reproduce.html">reproduction guide</a> for what a passing report establishes.</p>
+<h2 id="documentation">Documentation</h2>
+<p>The Markdown guides are the editable source. The corresponding HTML guides are generated with <code>tools/build_docs.py</code> using the Python <code>Markdown</code> package. The landing page is <code>docs/index.html</code>; <code>docs/assets/</code> contains its media and styling. No web framework or build service is needed to read it.</p>
+<p><a href="index.html">Overview</a> · <a href="start-here.html">Start here</a> · <a href="reproduce.html">Reproduce</a></p></main></div>
+<footer class="footer"><span>SKULL / MORPHOLOGY — RESEARCH GUIDE</span><a href="index.html">Back to the visual guide ↑</a></footer>
+</div></body></html>

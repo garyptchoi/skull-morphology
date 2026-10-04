@@ -1,88 +1,95 @@
 # Robust Parametric Estimation of Avian Cranial Morphology
 
-<img src = "https://github.com/garyptchoi/skull-morphology/blob/main/cover.png" height="400" />
+Python code and data for measuring skull dimensions, orbital radius and neurocranial shape from prepared 3D skull meshes.
 
-This repository contains Python scripts for the robust parametric estimation of avian skull morphology.
+By **Kaikwan Lau and Gary P. T. Choi**.
 
-* **Categories:** The scripts are categorized into (1) Geometric Analysis, (2) Statistical Analysis.
-* **Geometric Analysis:** Extract geometric features from 3D avian skull models.
-* **Statistical Analysis:** Perform correlation analysis and modelling on the measurements.
+[Project website](https://kaikwanlau.github.io/skull-morphology/) · [Getting started](docs/START_HERE.md) · [Read the paper](https://arxiv.org/abs/2511.06426)
 
-## Data Files
+<p align="center"><a href="docs/assets/demo.mp4"><img src="demo.gif" width="800" alt="A real skull mesh progresses through a bounding box, curvature-based orbit selection, a fitted sphere and a braincase ellipsoid." /></a></p>
 
-* The folder **dataset** contains the preprocessed mesh files of all 100 specimens of Darwin's finches and their relatives.
-* The file **Dataset_training.xlsx** records all dimension and curvature quantities for the 50 training samples (which can be used for the training the curvature prediction model).
-* The file **Dataset.xlsx** records all geometric quantities and curvature prediction results for all 100 specimens, together with relevant statistical values.
+## Getting started
 
+1. Choose **Code → Download ZIP** above, then extract the files.
+2. Follow the [installation guide](docs/START_HERE.md#1-download-and-install) for your operating system. It covers Python 3.12 and the required packages.
+3. With the project environment activated, run this command from the project folder:
 
-## Geometric Analysis Scripts
+```bash
+python quickstart.py
+```
 
-### 1. fit_sphere.py
-* **Purpose:** Locate and quantify the orbit (a CONCAVE feature).
-* **Action 1:** Batch-process all .stl files in a folder. 
-* **Action 2:** Identify the most concave points in a specific region. 
-* **Action 3:** Fit a SPHERE to these points using a robust iterative method.
-* **Action 4:** Save all skull dimensions, sphere radii and centers, and orbit curvatures to an .xlsx file.
+The example fits one orbit of the supplied `G.DifficilisA.stl` skull. Open **`output/quickstart/inspection.png`** to inspect the fit and **`measurements.csv`** to see the measurements. **`run.json`** records the settings and software versions.
 
-### 2. fit_ellipsoid.py
-* **Purpose:** Locate and quantify the braincase (a CONVEX feature).
-* **Action 1:** Batch-process all .stl files in a folder. 
-* **Action 2:** Identify the most convex points in a specific region. 
-* **Action 3:** Fit an **axis-aligned** ELLIPSOID to these points. 
-* **Action 4:** Save all skull dimensions, ellipsoidal semi-axis lengths, and ellipsoid centers to an .xlsx file.
+This example uses an already prepared mesh and runs without MATLAB or an interactive 3D window. To analyse your own specimens, follow [Use your own skulls](docs/START_HERE.md#use-your-own-skulls). To run the study analyses, follow [Reproduce the paper](docs/REPRODUCE.md).
 
-### 3. bounding_AABB.py
-* **Purpose:** Compute an **Axis-Aligned Bounding Box (AABB)** of an input skull model. 
-* **Action:** Load **one** .stl file and compute its Axis-Aligned Bounding Box (a simple, non-rotated box). 
+## Data files
 
-### 4. bounding_OBB.py
-* **Purpose:** Compute an **Oriented Bounding Box (OBB)** of an input skull model. 
-* **Action:** Load **one** .stl file and compute its **Oriented Bounding Box (OBB)** (the smallest possible rotated box).
+All study data are in [`data/`](data/).
 
+| File or folder | Contents |
+| :--- | :--- |
+| [`DF_and_their_relatives/`](data/DF_and_their_relatives/) | Prepared meshes of 100 Darwin’s finches and their relatives |
+| [`Dataset.xlsx`](data/Dataset.xlsx) | Measurements and prediction results for the 100 finch specimens |
+| [`Dataset_training.xlsx`](data/Dataset_training.xlsx) | Measurements for the 50 training specimens |
+| [`Dataset_other_taxa.xlsx`](data/Dataset_other_taxa.xlsx) | Records for 51 additional birds and 2 rodent examples |
 
-## Statistical Analysis Scripts
+Additional bird meshes, four exploratory human crania and figure inputs are also included. See [data sources and scope](data/README.md) for the full inventory, fitting limitations and source attributions.
 
-### 1. correlation.py
-* **Purpose:** Perform a statistical analysis on skull dimensions and orbit geometries.
-* **Action 1:** Load a specified Excel file (e.g., `Dataset.xlsx`).
-* **Action 2:** Generate a 2x3 grid of scatter plots (Radius vs. Dimensions, Curvature vs. Dimensions) with linear regression lines. 
-* **Action 3:** Calculate and print separate Pearson (linear) and Spearman (monotonic) correlation matrices for **radius** and **curvature** against skull dimensions. 
+## Geometric analysis scripts
 
-### 2. correlation_specific.py
-* **Purpose:** Run a simple statistical test for a specific relationship.
-* **Action 1:** Load a specified Excel file (e.g., `Dataset.xlsx`).
-* **Action 2:** Build a simple linear regression model for two specified quantities.
-* **Action 3:** Print the `statsmodels` summary to assess the statistical significance (P-value) of this single relationship.
+These scripts are in [`2_fitting/`](2_fitting/).
 
-### 3. correlation_combined.py
-* **Purpose:** Perform a statistical analysis on skull dimensions, orbit geometries, and braincase geometries.
-* **Action 1:** Load a specified Excel file (e.g., `Dataset.xlsx`).
-* **Action 2:** Use the `tabulate` library to print neatly formatted Pearson and Spearman correlation tables.
-* **Action 3:** Correlate **ellipsoid axes (a, b, c)** and **curvature** against **skull dimensions (x, y, z)** in one comprehensive table.
+| Script | Purpose |
+| :--- | :--- |
+| [`fit_sphere.py`](2_fitting/fit_sphere.py) | Fit orbital spheres to the supplied finch skulls and save measurements |
+| [`fit_ellipsoid.py`](2_fitting/fit_ellipsoid.py) | Fit axis-aligned ellipsoids to the neurocranium and save semi-axis lengths |
+| [`bounding_AABB.py`](2_fitting/bounding_AABB.py) | Inspect the axis-aligned skull dimensions |
+| [`bounding_OBB.py`](2_fitting/bounding_OBB.py) | Inspect an oriented bounding box |
+| [`fit_sphere_batch.py`](2_fitting/fit_sphere_batch.py) | Process folders of prepared skulls and save inspection images |
 
-### 4. modelling.py
-* **Purpose:** Create a multiple linear regression model to predict curvature from model dimensions.
-* **Action 1:** Load a specified Excel file (e.g., `Dataset_training.xlsx`).
-* **Action 2:** Build a multiple linear regression model: `curvature ~ length_x + width_y + height_z`.
-* **Action 3:** Generate a side-by-side 3D scatter plot comparing **Actual Curvature** vs. **Model's Approximated Curvature**.
-* **Action 4:** Print the full `statsmodels` summary of the linear model (R-squared, coefficients, p-values, etc.).
+Use the [fitting guide](docs/START_HERE.md#use-your-own-skulls) to choose inputs and settings. Prepared bird meshes need coordinates in **millimetres**, with the **beak at −x, posterior at +x and dorsal direction +z**. Inspect every fit before interpreting its measurements; the supplied defaults were selected for finches.
 
-## Citation
+## Statistical analysis scripts
 
-If you use this code or data in your work, please cite:
+These scripts are in [`3_statistics/`](3_statistics/) and read the released Excel workbooks.
 
-Kaikwan Lau and Gary P. T. Choi, 
-"[Robust Parametric Estimation of Avian Cranial Morphology.](https://arxiv.org/abs/2511.06426)"
-arXiv preprint arXiv:2511.06426, 2025.
+| Script | Purpose |
+| :--- | :--- |
+| [`correlation.py`](3_statistics/correlation.py) | Plot and summarise relationships between skull dimensions and orbit measurements |
+| [`correlation_specific.py`](3_statistics/correlation_specific.py) | Analyse a selected relationship |
+| [`correlation_combined.py`](3_statistics/correlation_combined.py) | Compare skull dimensions, ellipsoid axes and orbit curvature |
+| [`modelling.py`](3_statistics/modelling.py) | Fit the curvature prediction model using the training specimens |
+
+See [Reproduce the paper](docs/REPRODUCE.md) for commands and outputs. New fitting results do not automatically replace the released workbooks used by these analyses.
+
+## Other workflows
+
+| Task | Where to go |
+| :--- | :--- |
+| Prepare raw scans | [MATLAB remeshing setup](1_remeshing/Remeshing/README.md) |
+| Compare both orbits | [Bilateral fitting scripts](docs/REFERENCE.md#4-bilateral-fits) |
+| Generate figures or animation | [Figure and media guide](docs/REPRODUCE.md#figures-and-media) |
+| Check the encoded paper results | [Numerical verification](docs/REPRODUCE.md#numerical-verification) |
+| Find any script’s inputs and outputs | [Full script reference](docs/REFERENCE.md) |
+
+The [project website](https://kaikwanlau.github.io/skull-morphology/) includes the animation, video tutorial and illustrated guides. After downloading the repository, you can also open **`docs/index.html`** to use it offline.
+
+## Cite this work
+
+Kaikwan Lau and Gary P. T. Choi. *[Robust Parametric Estimation of Avian Cranial Morphology](https://arxiv.org/abs/2511.06426).* arXiv:2511.06426 (2025).
 
 ```bibtex
 @article{lau2025robust,
-    author    = {Lau, Kaikwan and Choi, Gary P. T.},
-    title     = {Robust Parametric Estimation of Avian Cranial Morphology},
-    journal   = {arXiv preprint arXiv:2511.06426},
-    year      = {2025},
-    eprint    = {2511.06426},
-    archivePrefix = {arXiv},
-    primaryClass = {q-bio.QM}
+  author = {Lau, Kaikwan and Choi, Gary P. T.},
+  title = {Robust Parametric Estimation of Avian Cranial Morphology},
+  journal = {arXiv preprint arXiv:2511.06426},
+  year = {2025},
+  eprint = {2511.06426},
+  archivePrefix = {arXiv},
+  primaryClass = {q-bio.QM}
 }
 ```
+
+Code license: **[Apache License 2.0](LICENSE)**. Bundled MATLAB dependencies retain their [third-party licenses and credits](1_remeshing/Remeshing/THIRD_PARTY.md). See the original data sources for their attribution and reuse terms.
+
+[Report an issue](https://github.com/kaikwanlau/skull-morphology/issues) · [Script reference](docs/REFERENCE.md)

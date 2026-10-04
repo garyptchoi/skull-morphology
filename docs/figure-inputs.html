@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Figure inputs — Skull morphology</title><link rel="stylesheet" href="assets/site.css"></head>
+<body><a class="skip" href="#main">Skip to content</a><div class="shell">
+<header class="masthead"><a class="brand" href="index.html">skull / morphology<small>GEOMETRY · BIOLOGY · CODE</small></a>
+<nav aria-label="Main navigation"><a href="index.html">Overview</a><a href="start-here.html">Start here</a><a class="repo-link" href="https://github.com/kaikwanlau/skull-morphology">GitHub ↗</a></nav></header>
+<div class="article-layout"><aside class="article-nav" aria-label="Guide contents"><a href="index.html">Project overview</a><a href="start-here.html">Start here</a><a href="reproduce.html">Reproduce</a><a href="reference.html">Script reference</a><a href="data.html">Data sources</a><a href="citation.html">Citation</a></aside><main class="article" id="main"><h1 id="figure-inputs-and-sources">Figure inputs and sources</h1>
+<p>This folder contains the four additional inputs used in Fig. 1 and Fig. S1. The photograph comes from the reference cited in the manuscript. The meshes come from the Harvard Dataverse archives linked by Gary P. T. Choi's <a href="https://garyptchoi.github.io/publications.html">publication list</a>.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">Used for</th>
+<th style="text-align: left;">Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>photo/C.pallidus.jpg</code></td>
+<td style="text-align: left;">Fig. 1(a), photograph of <em>Camarhynchus pallidus</em></td>
+<td style="text-align: left;">Wikimedia Commons; Julien Renoult, CC BY 4.0</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>raw_meshes/P2.InornataA.stl</code></td>
+<td style="text-align: left;">Fig. 1(b), original scan-derived surface of <em>Pinaroloxias inornata</em></td>
+<td style="text-align: left;">Al-Mosleh et al. (2021), original full-skull mesh</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>prior_remeshing/C.PallidusA.stl</code></td>
+<td style="text-align: left;">Fig. S1, earlier-remeshing comparison for <em>Camarhynchus pallidus</em></td>
+<td style="text-align: left;">Mosleh et al. (2023), full-skull watertight mesh</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>prior_remeshing/C.flaveolaA.stl</code></td>
+<td style="text-align: left;">Fig. S1, earlier-remeshing comparison for <em>Coereba flaveola</em></td>
+<td style="text-align: left;">Mosleh et al. (2023), full-skull watertight mesh</td>
+</tr>
+</tbody>
+</table>
+<p>All four files are included. Their contents are unchanged from the source files. The original photograph is kept as a JPEG; <code>5_figures/figure.py</code> reads <code>C.pallidus.jpg</code> and applies the existing crop when drawing the panel.</p>
+<h2 id="photograph-credit">Photograph credit</h2>
+<p>Julien Renoult, <em>Woodpecker Finch (Camarhynchus pallidus)</em>, 27 March 2017. <a href="https://commons.wikimedia.org/wiki/File:Camarhynchus_pallidus_12789263.jpg">Wikimedia Commons file page</a>, originally published on <a href="https://www.inaturalist.org/photos/12789263">iNaturalist</a>. Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>.</p>
+<p>The stored photo is unmodified. Fig. 1(a) crops it. When reusing that panel, retain the photographer's credit, source and licence link, and state that the photo is cropped.</p>
+<h2 id="mesh-sources">Mesh sources</h2>
+<p><strong>Original full skull:</strong> <a href="https://doi.org/10.7910/DVN/IHODX1">Al-Mosleh et al. (2021), Code and Data, version 2.0</a>. The source path is <code>Meshes/Full Skulls STL/P2.InornataA.stl</code>, <a href="https://dataverse.harvard.edu/api/access/datafile/5193531">Dataverse file 5193531</a>. This is a scan-derived STL surface, not a CT image stack. It contains 323,627 triangles; the figure script reduces the displayed geometry without changing the stored file.</p>
+<p><strong>Earlier remeshing:</strong> <a href="https://doi.org/10.7910/DVN/UQQ6EZ">Mosleh et al. (2023), Bird Beaks, version 1.0</a>. Both files were extracted from <code>Meshes - Darwins finches.zip</code>, <a href="https://dataverse.harvard.edu/api/access/datafile/6947348">Dataverse file 6947348</a>:</p>
+<ul>
+<li><code>Meshes/Darwins Finches/Full Skulls Watertight/C.PallidusA.stl</code> (2,926 triangles).</li>
+<li><code>Meshes/DF Relatives/Full Skulls Watertight/C.flaveolaA.stl</code> (2,622 triangles).</li>
+</ul>
+<p>Both Dataverse records release the data under <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>. Cite the associated studies when using these meshes:</p>
+<ul>
+<li>Al-Mosleh, S., Choi, G. P. T., Abzhanov, A. and Mahadevan, L. (2021). <a href="https://doi.org/10.1073/pnas.2105957118">Geometry and dynamics link form, function, and evolution of finch beaks</a>. <em>PNAS</em>, 118(46), e2105957118.</li>
+<li>Mosleh, S., Choi, G. P. T., Musser, G. M., James, H. F., Abzhanov, A. and Mahadevan, L. (2023). <a href="https://doi.org/10.1098/rspb.2023.0420">Beak morphometry and morphogenesis across avian radiations</a>. <em>Proceedings of the Royal Society B</em>, 290, 20230420.</li>
+</ul>
+<h2 id="checks-and-use">Checks and use</h2>
+<p>The photograph matches Wikimedia's published SHA-1 checksum. The raw mesh matches Dataverse's published MD5 checksum. The two files extracted from the ZIP pass its CRC-32 checks. File sizes, SHA-256 checksums and source paths are recorded in <a href="https://github.com/kaikwanlau/skull-morphology/blob/main/data/figure_inputs/sources.json">sources.json</a>.</p>
+<p>The fitting and statistical analyses continue to use the prepared meshes elsewhere in <code>data/</code>. These three figure meshes represent earlier processing stages and do not add specimens to the analysis cohorts.</p>
+<p>To draw the affected figures:</p>
+<pre><code class="language-bash">python 5_figures/figure.py --only 1,S1
+</code></pre>
+<p>The command also prepares or loads the figure script's measurement cache. If an input is removed, the script leaves its panel as a labelled blank. Restoring these inputs resolves the four missing panels; it does not by itself verify every numerical result or guarantee identical rendering across software versions.</p></main></div>
+<footer class="footer"><span>SKULL / MORPHOLOGY — RESEARCH GUIDE</span><a href="index.html">Back to the visual guide ↑</a></footer>
+</div></body></html>

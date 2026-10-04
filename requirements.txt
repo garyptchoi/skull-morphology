@@ -1,0 +1,15 @@
+# Python 3.12. Numerical versions from the supplied measurement environment (SI Section S1).
+# Record versions when reproducing results. Visualization dependencies below use minimum versions.
+numpy==2.2.6
+scipy==1.13.1
+pandas==2.3.3
+openpyxl==3.1.5
+trimesh==4.8.3
+rtree==1.4.1
+networkx==3.6
+statsmodels==0.14.5
+matplotlib>=3.8
+seaborn>=0.13
+tabulate>=0.9
+pyvista>=0.44          # the 3D windows of the fitting scripts
+# matlabengine         # only for 1_remeshing; its version must match your MATLAB release (see 1_remeshing/remesh_in_pycharm.py)
