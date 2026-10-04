@@ -43,23 +43,23 @@ try:
 
     print(f"Robust color limits set (2nd-98th percentile): vmin={vmin:.4f}, vmax={vmax:.4f}")
 
-    ax1.set_title('1. Actual Curvature', fontsize=16)
+    ax1.set_title('Actual Curvature', fontsize=16)
     scatter1 = ax1.scatter(df['length_x'], df['width_y'], df['height_z'],
                            c=df['curvature'], cmap='viridis', s=60, alpha=0.8,
                            vmin=vmin, vmax=vmax)
     ax1.set_xlabel('Length (x)', fontweight='bold')
     ax1.set_ylabel('Width (y)', fontweight='bold')
     ax1.set_zlabel('Height (z)', fontweight='bold')
-    fig.colorbar(scatter1, ax=ax1, shrink=0.6, label='Actual Curvature (1/Radius)')
+    fig.colorbar(scatter1, ax=ax1, shrink=0.6)
 
-    ax2.set_title('2. Model Approximation', fontsize=16)
+    ax2.set_title('Predicted Curvature', fontsize=16)
     scatter2 = ax2.scatter(df['length_x'], df['width_y'], df['height_z'],
                            c=df['predicted_curvature'], cmap='viridis', s=60, alpha=0.8,
                            vmin=vmin, vmax=vmax)
     ax2.set_xlabel('Length (x)', fontweight='bold')
     ax2.set_ylabel('Width (y)', fontweight='bold')
     ax2.set_zlabel('Height (z)', fontweight='bold')
-    fig.colorbar(scatter2, ax=ax2, shrink=0.6, label='Predicted Curvature (1/Radius)')
+    fig.colorbar(scatter2, ax=ax2, shrink=0.6)
 
     output_filename = str(paths.output_dir(__file__) / 'modelling_results.png')
 

@@ -31,7 +31,9 @@ def fit_axis_aligned_ellipsoid_iteratively(points, max_iterations=3, outlier_std
     last_successful_result = None
 
     for i in range(max_iterations):
-        if len(current_points) < 7:
+
+        # Check whether the number of points falls below the minimum required to uniquely determined the ellipsoid
+        if len(current_points) < 6:
             return None, None
 
         center_guess = np.mean(current_points, axis=0)
@@ -47,6 +49,7 @@ def fit_axis_aligned_ellipsoid_iteratively(points, max_iterations=3, outlier_std
         axes_bounds = [(1e-6, None)] * 3
         optimizer_bounds = center_bounds + axes_bounds
 
+        # Find the optimal ellipsoid parameters
         result = minimize(
             axis_aligned_ellipsoid_loss_function,
             initial_guess,
@@ -67,6 +70,7 @@ def fit_axis_aligned_ellipsoid_iteratively(points, max_iterations=3, outlier_std
         errors = np.abs(distances - 1.0)
         mean_error, std_error = np.mean(errors), np.std(errors)
 
+        # Check whether the result stabilizes
         if std_error < 1e-6: break
         inlier_mask = errors < (mean_error + outlier_std_dev * std_error)
         if np.all(inlier_mask): break
